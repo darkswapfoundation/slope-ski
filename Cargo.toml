@@ -1,0 +1,49 @@
+[package]
+name = "slope-ski"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+leptos = { version = "0.8.2", features = ["csr"] }
+leptos_meta = { version = "0.8.2" }
+leptos_router = { version = "0.8.2" }
+leptos_reactive = "*"
+wasm-bindgen = "0.2"
+console_log = "1.0"
+log = "0.4"
+reqwasm = "0.5"
+serde = { version = "1.0.219", features = ["derive"] }
+
+
+[features]
+hydrate = ["leptos/hydrate"]
+csr = ["leptos/csr"]
+
+[package.metadata.leptos]
+# The name of the package in the workspace that contains the Leptos app
+name = "slope-ski"
+# The file to watch for style changes
+style-file = "public/style.css"
+# Assets source dir. All files found here will be copied and synchronized to site-root.
+assets-dir = "public"
+# The package that contains the server binary
+bin-package = "slope-ski"
+# The site root folder is where cargo-leptos generates the static files
+# that are served.
+site-root = "target/site"
+# The port to serve the site on.
+site-port = 3000
+# The port to serve the cargo-leptos wasm-pack proxy on.
+reload-port = 3001
+# The browserlist query to use for supported browsers.
+browserquery = "defaults"
+# The features to use when building the lib target for wasm.
+lib-features = ["csr"]
+
+# The command to use for end-to-end tests
+end2end-cmd = "node_modules/.bin/playwright test"
+#  The browserlist query to use for supported browsers
+end2end-dir = "e2e"

@@ -1,0 +1,12 @@
+{
+  "name": "slope-ski-proxy",
+  "version": "1.0.0",
+  "description": "Proxy server for slope-ski",
+  "main": "proxy.js",
+  "scripts": {
+    "start": "node proxy.js"
+  },
+  "dependencies": {
+    "http-proxy-middleware": "^3.0.0"
+  }
+}

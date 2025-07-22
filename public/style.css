@@ -1,0 +1,164 @@
+:root {
+    --background-start: #2a2a72;
+    --background-end: #009ffd;
+    --card-background: rgba(10, 10, 20, 0.8);
+    --text-color: #ffffff;
+    --primary-accent: #ffffff;
+    --secondary-accent: #3a3a8a;
+    --border-color: #4a4a9a;
+    --header-background: rgba(0, 0, 10, 0.9);
+    --footer-background: rgba(0, 0, 10, 0.9);
+    --font-pixel: "Pixelify Sans", sans-serif;
+    --font-sans: sans-serif;
+}
+
+body {
+    font-family: var(--font-sans);
+    background: linear-gradient(to bottom, var(--background-start), var(--background-end));
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+}
+
+body::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 200px; /* Adjust height of mountains */
+    background-image:
+        linear-gradient(to top, rgba(42, 42, 114, 0.5) 0%, transparent 100%),
+        /* Add more layers for parallax effect if desired */
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpolygon fill='%233a3a8a' points='0,100 100,100 50,0'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpolygon fill='%234a4a9a' points='0,100 100,100 20,20 80,20'/%3E%3C/svg%3E");
+    background-repeat: repeat-x;
+    background-size: 100px 100px, 150px 150px;
+    z-index: -1;
+    opacity: 0.5;
+}
+
+
+main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 80px 20px 100px 20px; /* Adjust padding for header and footer */
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background-color: var(--header-background);
+    border-bottom: 1px solid var(--border-color);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+header h1 {
+    margin: 0;
+    font-family: var(--font-pixel);
+    font-size: 28px;
+    color: var(--primary-accent);
+}
+
+header nav a {
+    margin: 0 15px;
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: bold;
+    font-family: var(--font-pixel);
+    font-size: 16px;
+    transition: color 0.3s;
+}
+
+header nav a:hover, header nav a.active {
+    color: var(--primary-accent);
+}
+
+header button {
+    background-color: transparent;
+    color: var(--primary-accent);
+    border: 1px solid var(--primary-accent);
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-pixel);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+header button:hover {
+    background-color: var(--primary-accent);
+    color: var(--background-start);
+}
+
+footer {
+    background-color: var(--footer-background);
+    color: var(--text-color);
+    text-align: center;
+    padding: 20px;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    border-top: 1px solid var(--border-color);
+}
+
+h2, h3, h4 {
+    font-family: var(--font-pixel);
+}
+
+.card {
+    background-color: var(--card-background);
+    padding: 30px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    max-width: 500px;
+    margin: 40px auto;
+    backdrop-filter: blur(10px);
+}
+
+input, select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    background-color: var(--secondary-accent);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 6px;
+    font-family: var(--font-sans);
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    background-color: var(--primary-accent);
+    color: var(--background-start);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-pixel);
+    font-size: 18px;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #ddd;
+}
+
+button.secondary {
+    background-color: transparent;
+    border: 1px solid var(--primary-accent);
+    color: var(--primary-accent);
+}
+
+button.secondary:hover {
+    background-color: var(--primary-accent);
+    color: var(--background-start);
+}

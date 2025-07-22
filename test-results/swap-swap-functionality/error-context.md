@@ -1,0 +1,49 @@
+# Page snapshot
+
+```yaml
+- img
+- banner:
+  - heading "slope.ski" [level=1]
+  - navigation:
+    - link "Swap":
+      - /url: /swap
+    - link "Pool":
+      - /url: /pool
+    - link "Farm":
+      - /url: /farm
+    - link "Stake":
+      - /url: /stake
+    - link "Dashboard":
+      - /url: /dashboard
+    - button "Connect":
+      - img
+      - text: Connect
+- main:
+  - heading "Swap" [level=1]
+  - img
+  - heading "slope.ski" [level=2]
+  - paragraph: Stable swaps on the slopes
+  - combobox:
+    - option "From Token" [disabled]
+    - option "Bitcoin" [selected]
+    - option "Wrapped Bitcoin"
+    - option "renBTC"
+    - option "Synthetic BTC"
+    - option "Bitcoin BEP2"
+  - spinbutton
+  - button "Max"
+  - button:
+    - img
+  - combobox:
+    - option "To Token" [disabled] [selected]
+    - option "Bitcoin"
+    - option "Wrapped Bitcoin"
+    - option "renBTC"
+    - option "Synthetic BTC"
+    - option "Bitcoin BEP2"
+  - spinbutton [disabled]
+  - text: "Exchange rate: Price Impact: Routed through:Curve TX cost: Slippage tolerance:0.5%"
+  - slider: "2.6"
+  - button "Ski Swap"
+- contentinfo: © 2024 slope.ski. All rights reserved.
+```
