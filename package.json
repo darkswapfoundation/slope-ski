@@ -4,12 +4,14 @@
   "description": "E2E tests for slope-ski",
   "main": "index.js",
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "proxy": "node proxy/proxy.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@playwright/test": "^1.42.1"
+    "@playwright/test": "^1.42.1",
+    "@types/node": "^24.1.0"
   }
 }

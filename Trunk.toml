@@ -1,0 +1,20 @@
+[watch]
+# Paths to watch for changes.
+watch = ["./src"]
+
+[build]
+target = "index.html"
+
+[tools]
+wasm-bindgen = "0.2.100"
+
+[serve]
+# The address to serve on.
+address = "127.0.0.1"
+# The port to serve on.
+port = 3000
+# Open a browser tab when the server starts.
+open = false
+
+[[proxy]]
+backend = "http://127.0.0.1:3001/api"

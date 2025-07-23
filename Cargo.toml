@@ -6,44 +6,82 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[dependencies]
-leptos = { version = "0.8.2", features = ["csr"] }
-leptos_meta = { version = "0.8.2" }
-leptos_router = { version = "0.8.2" }
-leptos_reactive = "*"
+[workspace]
+members = [".", "slope-ski-rebuild"]
+
+[workspace.dependencies]
+bitcoin = { version = "0.32.6", features = ["serde"] }
+ordinals = { git = "https://github.com/kungfuflex/alkanes-rs", branch = "kungfuflex/serde" }
+protorune-support = { git = "https://github.com/kungfuflex/alkanes-rs", branch = "kungfuflex/serde" }
+alkanes-support = { git = "https://github.com/kungfuflex/alkanes-rs", branch = "kungfuflex/serde" }
+alkanes-runtime = { git = "https://github.com/kungfuflex/alkanes-rs", branch = "kungfuflex/serde" }
+alkanes-macros = { git = "https://github.com/kungfuflex/alkanes-rs", branch = "kungfuflex/serde" }
+alkanes-std-factory-support = { git = "https://github.com/kungfuflex/alkanes-rs", branch = "kungfuflex/serde" }
+metashrew-support = { git = "https://github.com/sandshrewmetaprotocols/metashrew" }
+anyhow = "1.0"
+protobuf = "3.7.2"
 wasm-bindgen = "0.2"
+wasm-bindgen-test = "0.3"
+thiserror = "1.0.69"
+secp256k1 = { version = "0.29.0", features = ["rand-std", "serde"] }
+bip39 = "2.0.0"
+pbkdf2 = "0.12.2"
+aes-gcm = "0.10.3"
+rand = "0.8.5"
+sha2 = "0.10.8"
+sha3 = "0.10.8"
+futures = "0.3.30"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.128"
+log = "0.4.22"
+hex = "0.4.3"
+async-trait = "0.1.81"
+base64 = "0.22.1"
+regex = "1.10.5"
+chrono = "0.4.38"
+web-sys = { version = "0.3", features = [
+  "console",
+  "Window",
+  "Document",
+  "Storage",
+  "Request",
+  "RequestInit",
+  "RequestMode",
+  "Response",
+  "ResponseInit",
+  "Headers",
+] }
+
+
+[dependencies]
+deezel-common = { path = "reference/deezel-common" }
+leptos = { version = "0.6.15", features = ["csr"] }
+leptos_meta = { version = "0.6.15" }
+leptos_router = { version = "0.6.15" }
+leptos_reactive = "0.6.15"
+wasm-bindgen = { workspace = true }
 console_log = "1.0"
 log = "0.4"
-reqwasm = "0.5"
+gloo-net = "0.4.0"
 serde = { version = "1.0.219", features = ["derive"] }
+deezel-web = { path = "reference/deezel-web", default-features = false, features = ["std", "native-deps", "wasm-inspection"] }
+alkanes-runtime = { workspace = true }
+alkanes-support = { workspace = true }
+anyhow = { workspace = true }
+bitcoin = { workspace = true }
+metashrew-support = { workspace = true }
+protorune-support = { workspace = true }
+oylswap-library = { path = "reference/oyl-protocol/alkanes/oylswap-library" }
+num-integer = "0.1.46"
+
+
 
 
 [features]
 hydrate = ["leptos/hydrate"]
 csr = ["leptos/csr"]
 
-[package.metadata.leptos]
-# The name of the package in the workspace that contains the Leptos app
-name = "slope-ski"
-# The file to watch for style changes
-style-file = "public/style.css"
-# Assets source dir. All files found here will be copied and synchronized to site-root.
-assets-dir = "public"
-# The package that contains the server binary
-bin-package = "slope-ski"
-# The site root folder is where cargo-leptos generates the static files
-# that are served.
-site-root = "target/site"
-# The port to serve the site on.
-site-port = 3000
-# The port to serve the cargo-leptos wasm-pack proxy on.
-reload-port = 3001
-# The browserlist query to use for supported browsers.
-browserquery = "defaults"
-# The features to use when building the lib target for wasm.
-lib-features = ["csr"]
 
-# The command to use for end-to-end tests
-end2end-cmd = "node_modules/.bin/playwright test"
-#  The browserlist query to use for supported browsers
-end2end-dir = "e2e"
+
+[patch.crates-io]
+slice-ring-buffer = { path = "reference/slice-ring-buffer-wasm-shim" }

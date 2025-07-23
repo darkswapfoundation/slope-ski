@@ -1,17 +1,49 @@
-use leptos_reactive::{create_resource, SignalGet};
+use deezel_common::provider::WalletProvider;
+use deezel_web::wallet_provider::BrowserWalletProvider;
+use leptos::{create_action, create_resource, SignalGet, SignalSet, Memo, create_signal, IntoView, component, view, For, event_target_value, expect_context, mount_to_body};
 use leptos::logging;
-use leptos::mount::mount_to_body;
-use leptos::prelude::*;
-use leptos::*;
-use leptos_router::{components::{A, Route, Router, Routes}, path};
+use leptos_router::{A, Route, Router, Routes};
 use wasm_bindgen::prelude::*;
-pub mod pool;
 pub mod farm;
+pub mod state;
+pub mod pool;
+pub mod token;
 
-const TOKENS: &[&str] = &["BTC", "ETH", "USDT", "USDC"];
+use crate::state::{provide_app_state, AppState, LiquidityPool};
 
 #[component]
 fn Header() -> impl IntoView {
+    let app_state = expect_context::<AppState>();
+    let wallet_account = app_state.wallet_account;
+
+    let app_state_connect = app_state.clone();
+    let connect_wallet = create_action(move |_: &()| {
+        let app_state = app_state_connect.clone();
+        async move {
+            let mut provider = BrowserWalletProvider::new("regtest".to_string()).await.unwrap();
+            match provider.connect().await {
+                Ok(wallet) => {
+                    app_state.wallet_provider.set(Some(provider));
+                    app_state.wallet_account.set(Some(wallet));
+                },
+                Err(e) => {
+                    logging::error!("Failed to connect wallet: {:?}", e);
+                }
+            }
+        }
+    });
+
+    let disconnect_wallet = create_action(move |_: &()| {
+        let app_state = app_state.clone();
+        async move {
+            if let Some(mut provider) = app_state.wallet_provider.get() {
+                let _ = provider.disconnect().await;
+                app_state.wallet_provider.set(None);
+                app_state.wallet_account.set(None);
+            }
+        }
+    });
+
     view! {
         <header>
             <h1>"slope.ski"</h1>
@@ -22,16 +54,41 @@ fn Header() -> impl IntoView {
                 <A href="/stake">"Stake"</A>
                 <A href="/dashboard">"Dashboard"</A>
             </nav>
-            <button>"Connect"</button>
+            <div>
+                {move || if let Some(wallet) = wallet_account.get() {
+                    view! {
+                        <>
+                            <span>{wallet.address.to_string()}</span>
+                            <button on:click=move |_| disconnect_wallet.dispatch(())>"Disconnect"</button>
+                        </>
+                    }.into_view()
+                } else {
+                    view! {
+                        <button on:click=move |_| connect_wallet.dispatch(())>"Connect"</button>
+                    }.into_view()
+                }}
+            </div>
         </header>
     }
 }
 
 #[component]
 fn Swap() -> impl IntoView {
-    let (from_token, set_from_token) = signal("BTC".to_string());
-    let (to_token, set_to_token) = signal("USDT".to_string());
-    let (amount, set_amount) = signal(0.0);
+    let app_state = expect_context::<AppState>();
+    let pools = app_state.pools;
+
+    let tokens = Memo::new(move |_| {
+        let mut tokens = std::collections::HashSet::new();
+        for pool in pools.get() {
+            tokens.insert(pool.asset_a.symbol.clone());
+            tokens.insert(pool.asset_b.symbol.clone());
+        }
+        tokens.into_iter().collect::<Vec<_>>()
+    });
+
+    let (from_token, set_from_token) = create_signal("".to_string());
+    let (to_token, set_to_token) = create_signal("".to_string());
+    let (amount, set_amount) = create_signal(0.0);
 
     let received_amount = move || amount.get();
 
@@ -48,27 +105,27 @@ fn Swap() -> impl IntoView {
             <p>"Stable swaps on the slopes"</p>
             <div>
                 <select data-testid="from-token-select" on:change=move |ev| set_from_token.set(event_target_value(&ev)) prop:value=move || from_token.get()>
-                    <option value="" disabled selected>From Token</option>
+                    <option value="" disabled selected>"Select Token"</option>
                     <For
-                        each=|| TOKENS
-                        key=|token| *token
-                        children=|token| view! { <option value=*token>{*token}</option> }
+                        each=move || tokens.get()
+                        key=|token| token.clone()
+                        children=move |token| view! { <option value={token.clone()}>{token.clone()}</option> }
                     />
                 </select>
                 <input type="number" placeholder="Amount" on:input=move |ev| set_amount.set(event_target_value(&ev).parse().unwrap_or(0.0)) prop:value=move || amount.get() />
                 <button>"Max"</button>
             </div>
-            <button on:click=swap_tokens>"↓↑"</button>
+            <button on:click=swap_tokens.clone()>"↓↑"</button>
             <div>
                 <select data-testid="to-token-select" on:change=move |ev| set_to_token.set(event_target_value(&ev)) prop:value=move || to_token.get()>
-                    <option value="" disabled selected>To Token</option>
+                    <option value="" disabled selected>"Select Token"</option>
                      <For
-                        each=|| TOKENS
-                        key=|token| *token
-                        children=|token| view! { <option value=*token>{*token}</option> }
+                        each=move || tokens.get()
+                        key=|token| token.clone()
+                        children=move |token| view! { <option value={token.clone()}>{token.clone()}</option> }
                     />
                 </select>
-                <input type="text" placeholder="You will receive" readonly=true value=received_amount />
+                <input type="text" placeholder="You will receive" readonly=true prop:value=received_amount />
             </div>
             <div>
                 <p>"Exchange rate:"</p>
@@ -79,18 +136,14 @@ fn Swap() -> impl IntoView {
                 <input type="range" />
             </div>
             <button>"Ski Swap"</button>
-            <footer>
-                <p>"© 2024 slope.ski. All rights reserved."</p>
-            </footer>
         </div>
     }
 }
 
-use crate::pool::LiquidityPool;
-use reqwasm::http::Request;
+use gloo_net::http::Request;
 
 async fn fetch_pools() -> Result<Vec<LiquidityPool>, String> {
-    let url = "http://127.0.0.1:3000/api/pools";
+    let url = "http://127.0.0.1:3001/api/pools";
     Request::get(url)
         .send()
         .await
@@ -138,26 +191,28 @@ fn PoolItem(pool: LiquidityPool) -> impl IntoView {
 
 #[component]
 fn Pool() -> impl IntoView {
-    let pools_resource = create_resource(|| (), |_| async move { fetch_pools().await });
+    let app_state = expect_context::<AppState>();
+    let pools = app_state.pools;
 
     view! {
         <div class="card">
             <h2>"Liquidity Pools"</h2>
             <p>"Add liquidity to earn fees."</p>
             <div>
-                {move || match pools_resource.get() {
-                    None => view! { <p>"Loading..."</p> }.into_any(),
-                    Some(Ok(pools)) => {
-                        if pools.is_empty() {
-                            view! { <p>"No pools available."</p> }.into_any()
-                        } else {
-                            pools.into_iter()
-                                .map(|pool| view! { <PoolItem pool=pool /> })
-                                .collect_view()
-                                .into_any()
-                        }
-                    },
-                    Some(Err(e)) => view! { <p>"Error: " {e.to_string()}</p> }.into_any(),
+                {move || {
+                    if pools.get().is_empty() {
+                        view! { <p>"No pools available."</p> }.into_view()
+                    } else {
+                        view! {
+                            <ul>
+                                <For
+                                    each=move || pools.get()
+                                    key=|pool| pool.id.clone()
+                                    children=|pool| view! { <PoolItem pool=pool /> }
+                                />
+                            </ul>
+                        }.into_view()
+                    }
                 }}
             </div>
         </div>
@@ -167,7 +222,7 @@ fn Pool() -> impl IntoView {
 use crate::farm::StakingGauge;
 
 async fn fetch_gauges() -> Result<Vec<StakingGauge>, String> {
-    let url = "http://127.0.0.1:3000/api/gauges";
+    let url = "http://127.0.0.1:3001/api/gauges";
     Request::get(url)
         .send()
         .await
@@ -193,26 +248,28 @@ fn FarmItem(gauge: StakingGauge) -> impl IntoView {
 
 #[component]
 fn Farm() -> impl IntoView {
-    let gauges_resource = create_resource(|| (), |_| async move { fetch_gauges().await });
+    let app_state = expect_context::<AppState>();
+    let gauges = app_state.gauges;
 
     view! {
         <div class="card">
             <h2>"Farms"</h2>
             <p>"Stake your LP tokens to earn rewards."</p>
             <div>
-                {move || match gauges_resource.get() {
-                    None => view! { <p>"Loading..."</p> }.into_any(),
-                    Some(Ok(gauges)) => {
-                        if gauges.is_empty() {
-                            view! { <p>"No farms available."</p> }.into_any()
-                        } else {
-                            gauges.into_iter()
-                                .map(|gauge| view! { <FarmItem gauge=gauge /> })
-                                .collect_view()
-                                .into_any()
-                        }
-                    },
-                    Some(Err(e)) => view! { <p>"Error: " {e.to_string()}</p> }.into_any(),
+                {move || {
+                    if gauges.get().is_empty() {
+                        view! { <p>"No farms available."</p> }.into_view()
+                    } else {
+                        view! {
+                            <ul>
+                                <For
+                                    each=move || gauges.get()
+                                    key=|gauge| gauge.id.clone()
+                                    children=|gauge| view! { <FarmItem gauge=gauge /> }
+                                />
+                            </ul>
+                        }.into_view()
+                    }
                 }}
             </div>
         </div>
@@ -280,8 +337,9 @@ fn UserStakedPosition(gauge: StakingGauge) -> impl IntoView {
 
 #[component]
 fn Dashboard() -> impl IntoView {
-    let pools_resource = create_resource(|| (), |_| async move { fetch_pools().await });
-    let gauges_resource = create_resource(|| (), |_| async move { fetch_gauges().await });
+    let app_state = expect_context::<AppState>();
+    let pools = app_state.pools;
+    let gauges = app_state.gauges;
 
     view! {
         <div class="card">
@@ -289,38 +347,40 @@ fn Dashboard() -> impl IntoView {
             <section>
                 <h3>"Your Liquidity Positions"</h3>
                 <div>
-                    {move || match pools_resource.get() {
-                        None => view! { <p>"Loading..."</p> }.into_any(),
-                        Some(Ok(pools)) => {
-                            if pools.is_empty() {
-                                view! { <p>"No positions found."</p> }.into_any()
-                            } else {
-                                pools.into_iter()
-                                    .map(|pool| view! { <UserLiquidityPosition pool=pool /> })
-                                    .collect_view()
-                                    .into_any()
-                            }
-                        },
-                        Some(Err(e)) => view! { <p>"Error: " {e.to_string()}</p> }.into_any(),
+                    {move || {
+                        if pools.get().is_empty() {
+                            view! { <p>"No positions found."</p> }.into_view()
+                        } else {
+                            view! {
+                                <ul>
+                                    <For
+                                        each=move || pools.get()
+                                        key=|pool| pool.id.clone()
+                                        children=|pool| view! { <UserLiquidityPosition pool=pool /> }
+                                    />
+                                </ul>
+                            }.into_view()
+                        }
                     }}
                 </div>
             </section>
             <section>
                 <h3>"Your Staked Positions"</h3>
                 <div>
-                    {move || match gauges_resource.get() {
-                        None => view! { <p>"Loading..."</p> }.into_any(),
-                        Some(Ok(gauges)) => {
-                            if gauges.is_empty() {
-                                view! { <p>"No positions found."</p> }.into_any()
-                            } else {
-                                gauges.into_iter()
-                                    .map(|gauge| view! { <UserStakedPosition gauge=gauge /> })
-                                    .collect_view()
-                                    .into_any()
-                            }
-                        },
-                        Some(Err(e)) => view! { <p>"Error: " {e.to_string()}</p> }.into_any(),
+                    {move || {
+                        if gauges.get().is_empty() {
+                            view! { <p>"No positions found."</p> }.into_view()
+                        } else {
+                            view! {
+                                <ul>
+                                    <For
+                                        each=move || gauges.get()
+                                        key=|gauge| gauge.id.clone()
+                                        children=|gauge| view! { <UserStakedPosition gauge=gauge /> }
+                                    />
+                                </ul>
+                            }.into_view()
+                        }
                     }}
                 </div>
             </section>
@@ -334,24 +394,64 @@ fn NotFound() -> impl IntoView {
 }
 
 #[component]
+fn Footer() -> impl IntoView {
+   view! {
+       <footer>
+           <p>"© 2024 slope.ski. All rights reserved."</p>
+       </footer>
+   }
+}
+
+#[component]
 fn App() -> impl IntoView {
+    provide_app_state();
+    let app_state = expect_context::<AppState>();
+
+    let app_state_clone = app_state.clone();
+    create_resource(
+        || (),
+        move |_| {
+           let app_state = app_state_clone.clone();
+           async move {
+               if let Ok(pools) = fetch_pools().await {
+                   app_state.pools.set(pools);
+               }
+               if let Ok(gauges) = fetch_gauges().await {
+                   app_state.gauges.set(gauges);
+               }
+           }
+        }
+    );
+
+    let is_loading = Memo::new(move |_| {
+        app_state.pools.get().is_empty() || app_state.gauges.get().is_empty()
+    });
+
     view! {
         <Router>
+            <Header />
             <main>
-                <Header />
-                <Routes fallback=|| view! { <NotFound/> }>
-                    <Route path=path!("/swap") view=Swap />
-                    <Route path=path!("/pool") view=Pool />
-                    <Route path=path!("/farm") view=Farm />
-                    <Route path=path!("/stake") view=Stake />
-                    <Route path=path!("/dashboard") view=Dashboard />
-                    <Route path=path!("/add-liquidity/:id") view=AddLiquidity />
-                    <Route path=path!("/remove-liquidity/:id") view=RemoveLiquidity />
-                    <Route path=path!("/stake-lp/:id") view=StakeLp />
-                    <Route path=path!("/unstake-lp/:id") view=UnstakeLp />
-                    <Route path=path!("/*any") view=NotFound />
-                </Routes>
+                {move || if is_loading.get() {
+                    view! { <p>"Loading..."</p> }.into_view()
+                } else {
+                    view! {
+                        <Routes>
+                            <Route path="/" view=Swap />
+                            <Route path="/swap" view=Swap />
+                            <Route path="/pool" view=Pool />
+                            <Route path="/farm" view=Farm />
+                            <Route path="/stake" view=Stake />
+                            <Route path="/dashboard" view=Dashboard />
+                            <Route path="/add-liquidity/:id" view=AddLiquidity />
+                            <Route path="/remove-liquidity/:id" view=RemoveLiquidity />
+                            <Route path="/stake-lp/:id" view=StakeLp />
+                            <Route path="/unstake-lp/:id" view=UnstakeLp />
+                            <Route path="/*any" view=NotFound />
+                        </Routes>
+                    }.into_view()
+                }}
             </main>
+            <Footer />
         </Router>
     }
 }

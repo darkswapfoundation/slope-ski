@@ -2,17 +2,28 @@ import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/swap');
+  await expect(page.getByRole('heading', { name: 'Swap' })).toBeVisible();
 });
 
 test('swap functionality', async ({ page }) => {
   // Check initial state
   await expect(page.getByRole('banner').getByRole('heading', { name: 'slope.ski' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Swap' })).toBeVisible();
+
   // Select initial values and assert they are set
-  await page.getByTestId('from-token-select').selectOption('BTC');
-  await expect(page.getByTestId('from-token-select')).toHaveValue('BTC');
-  await page.getByTestId('to-token-select').selectOption('USDT');
-  await expect(page.getByTestId('to-token-select')).toHaveValue('USDT');
+  const fromTokenSelect = page.getByTestId('from-token-select');
+  const toTokenSelect = page.getByTestId('to-token-select');
+
+  const fromTokenOptions = await fromTokenSelect.locator('option').allTextContents();
+  const toTokenOptions = await toTokenSelect.locator('option').allTextContents();
+
+  const firstToken = fromTokenOptions[1];
+  const secondToken = toTokenOptions[2];
+
+  await fromTokenSelect.selectOption(firstToken);
+  await expect(fromTokenSelect).toHaveValue(firstToken);
+  await toTokenSelect.selectOption(secondToken);
+  await expect(toTokenSelect).toHaveValue(secondToken);
 
   // Enter amount
   await page.locator('input[type="number"]').fill('10');
@@ -20,10 +31,11 @@ test('swap functionality', async ({ page }) => {
 
   // Swap tokens
   await page.locator('button:has-text("↓↑")').click();
-  await expect(page.getByTestId('from-token-select')).toHaveValue('USDT');
-  await expect(page.getByTestId('to-token-select')).toHaveValue('BTC');
+  await expect(fromTokenSelect).toHaveValue(secondToken);
+  await expect(toTokenSelect).toHaveValue(firstToken);
 
   // Change token
-  await page.getByTestId('from-token-select').selectOption('ETH');
-  await expect(page.getByTestId('from-token-select')).toHaveValue('ETH');
+  const thirdToken = fromTokenOptions[3];
+  await fromTokenSelect.selectOption(thirdToken);
+  await expect(fromTokenSelect).toHaveValue(thirdToken);
 });
