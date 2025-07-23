@@ -34,13 +34,15 @@ pub fn App() -> impl IntoView {
         || (),
         move |_| {
             let app_state = app_state_clone.clone();
+            // Chadson: Temporarily disabled data fetching to allow frontend to render without a backend.
+            // This will be re-enabled once the backend is available.
             async move {
-                if let Ok(pools) = fetch_pools().await {
-                    app_state.pools.set(Some(pools));
-                }
-                if let Ok(gauges) = fetch_gauges().await {
-                    app_state.gauges.set(Some(gauges));
-                }
+                // if let Ok(pools) = fetch_pools().await {
+                //     app_state.pools.set(Some(pools));
+                // }
+                // if let Ok(gauges) = fetch_gauges().await {
+                //     app_state.gauges.set(Some(gauges));
+                // }
             }
         }
     );
