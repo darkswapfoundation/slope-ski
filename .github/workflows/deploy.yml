@@ -36,4 +36,3 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-project-name: "slope-ski" # The name of your project in Vercel
           scope: ${{ secrets.VERCEL_ORG_ID }}
-          working-directory: ./dist
