@@ -1,20 +1,11 @@
-[watch]
-# Paths to watch for changes.
-watch = ["./src"]
-
-[build]
-target = "index.html"
-
-[tools]
-wasm-bindgen = "0.2.100"
+# Chadson v69.0.0: Systematic Task Completion
+#
+# This file configures the Trunk build tool for the slope-ski frontend.
+#
+# Current Task: Rebuild the slope-ski frontend from scratch.
+# Step: Fix static asset serving.
 
 [serve]
-# The address to serve on.
 address = "127.0.0.1"
-# The port to serve on.
-port = 3000
-# Open a browser tab when the server starts.
-open = false
+port = 8081
 
-# [[proxy]]
-# backend = "http://127.0.0.1:3001/api"

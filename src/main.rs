@@ -1,3 +1,5 @@
+use slope_ski::App;
+
 fn main() {
-    println!("Hello, world!");
+    leptos::mount_to_body(App);
 }
