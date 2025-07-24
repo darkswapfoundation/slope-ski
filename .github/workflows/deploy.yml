@@ -1,0 +1,39 @@
+# .github/workflows/deploy.yml
+# Chadson v69.0.0: This GitHub Action workflow automates the deployment of the Slope-Ski application.
+# It uses a custom build environment to compile the Rust/Leptos/Trunk frontend
+# and then deploys the static assets to Vercel.
+
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install trunk
+        run: cargo install trunk
+
+      - name: Build application
+        run: trunk build --release
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-project-name: "slope-ski" # The name of your project in Vercel
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+          working-directory: ./dist
