@@ -1,0 +1,50 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+    <!-- Chadson v69.0.0: Stylized Mountain Background for Slope.Ski -->
+    <!-- This SVG provides a clean, vector-based background that is scalable -->
+    <!-- and fits the dark, minimalist theme of the application. -->
+
+    <!-- Gradient for the sky -->
+    <defs>
+        <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#111827;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#374151;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <rect width="1920" height="1080" fill="url(#skyGradient)" />
+
+    <!-- Distant mountains (darkest) -->
+    <path d="M -100 800
+             L 300 500
+             L 600 700
+             L 900 400
+             L 1200 650
+             L 1500 550
+             L 1800 750
+             L 2100 600
+             V 1080 H -100 Z"
+          fill="#1F2937" />
+
+    <!-- Mid-ground mountains -->
+    <path d="M -150 900
+             L 200 650
+             L 500 850
+             L 800 600
+             L 1100 800
+             L 1400 700
+             L 1700 950
+             L 2000 800
+             V 1080 H -150 Z"
+          fill="#374151" />
+
+    <!-- Foreground mountains (lightest) -->
+    <path d="M -200 1080
+             L 100 800
+             L 400 1000
+             L 700 750
+             L 1000 950
+             L 1300 850
+             L 1600 1050
+             L 1920 900
+             V 1080 H -200 Z"
+          fill="#4B5563" />
+</svg>

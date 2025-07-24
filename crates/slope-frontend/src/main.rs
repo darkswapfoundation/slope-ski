@@ -1,4 +1,4 @@
-use slope_ski::App;
+use slope_frontend::App;
 
 fn main() {
     leptos::mount_to_body(App);
