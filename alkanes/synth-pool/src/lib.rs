@@ -18,11 +18,7 @@
 mod math;
 
 use alkanes_runtime::{declare_alkane, message::MessageDispatch, runtime::AlkaneResponder, storage::StoragePointer};
-use alkanes_runtime::{
-    println,
-    stdio::{stdout, Write},
-};
-use alkanes_support::id::AlkaneId;
+use alkanes_support::{id::AlkaneId, response::CallResponse};
 use anyhow::Result;
 use metashrew_support::compat::{to_arraybuffer_layout, to_passback_ptr};
 use ruint::aliases::U256;
@@ -53,14 +49,14 @@ pub enum SynthPoolMessage {
 
     #[opcode(1)]
     AddLiquidity {
-        amounts: [u128; N_COINS as usize],
+        amounts: Vec<u128>,
         min_mint_amount: u128,
     },
 
     #[opcode(2)]
     RemoveLiquidity {
         amount: u128,
-        min_amounts: [u128; N_COINS as usize],
+        min_amounts: Vec<u128>,
     },
 
     #[opcode(3)]
@@ -72,7 +68,7 @@ pub enum SynthPoolMessage {
 
     #[opcode(4)]
     RemoveLiquidityImbalance {
-        amounts: [u128; N_COINS as usize],
+        amounts: Vec<u128>,
         max_burn_amount: u128,
     },
 
@@ -104,10 +100,9 @@ pub enum SynthPoolMessage {
 pub struct SynthPool();
 
 pub trait MintableToken {
-  fn name(&self) -> String;
-  fn symbol(&self) -> String;
+    fn name(&self) -> String;
+    fn symbol(&self) -> String;
 }
-
 impl MintableToken for SynthPool {
     fn name(&self) -> String {
         "æfrBTC-LP".to_string()
@@ -203,237 +198,266 @@ impl SynthPool {
         }
 
         let dy = xp_reduced[i] - math::get_y_D(amp, i, &xp_reduced, D1)?;
-        Ok((dy - U256::from(1)))
+        Ok(dy - U256::from(1))
     }
-}
 
-impl AlkaneResponder for SynthPool {
-    fn on_message(&self, message: &SynthPoolMessage) -> Result<()> {
-        use SynthPoolMessage::*;
-        match message {
-            InitPool {
-                token_a,
-                token_b,
-                A,
-                fee,
-                admin_fee,
-                owner,
-            } => {
-                self.set_coins(0, *token_a);
-                self.set_coins(1, *token_b);
-                self.set_A(U256::from(*A));
-                self.set_fee(*fee);
-                self.set_admin_fee(*admin_fee);
-                self.set_owner(*owner);
-                Ok(())
-            }
-            Swap { i, j, dx, min_dy } => {
-                let i = *i as usize;
-                let j = *j as usize;
-                let dx = U256::from(*dx);
-                let min_dy = U256::from(*min_dy);
+    pub fn init_pool(
+        &self,
+        token_a: AlkaneId,
+        token_b: AlkaneId,
+        A: u128,
+        fee: u128,
+        admin_fee: u128,
+        owner: AlkaneId,
+    ) -> Result<CallResponse> {
+        self.set_coins(0, token_a);
+        self.set_coins(1, token_b);
+        self.set_A(U256::from(A));
+        self.set_fee(fee);
+        self.set_admin_fee(admin_fee);
+        self.set_owner(owner);
+        Ok(CallResponse::default())
+    }
 
-                let dy = self._exchange(i, j, dx)?;
-                anyhow::ensure!(dy >= min_dy, "Slippage screwed you");
+    pub fn add_liquidity(
+        &self,
+        amounts: Vec<u128>,
+        min_mint_amount: u128,
+    ) -> Result<CallResponse> {
+        let amp = self.A();
+        let old_balances = self._get_balances();
+        let token_supply = self.total_supply();
+        let D0 = if token_supply > U256::ZERO {
+            math::get_D(&old_balances, amp)?
+        } else {
+            U256::ZERO
+        };
 
-                let runtime = self.runtime();
-                runtime.transfer_from(self.coins(i), runtime.sender(), dx.try_into().unwrap())?;
-                runtime.transfer(self.coins(j), runtime.sender(), dy.try_into().unwrap())?;
+        let mut new_balances = old_balances;
+        for i in 0..N_COINS as usize {
+            new_balances[i] += U256::from(amounts[i]);
+        }
 
-                Ok(())
-            }
-            AddLiquidity {
-                amounts,
-                min_mint_amount,
-            } => {
-                let amp = self.A();
-                let old_balances = self._get_balances();
-                let token_supply = self.total_supply();
-                let D0 = if token_supply > U256::ZERO {
-                    math::get_D(&old_balances, amp)?
+        let D1 = math::get_D(&new_balances, amp)?;
+        anyhow::ensure!(D1 > D0, "D1 must be greater than D0");
+
+        let mint_amount;
+        if token_supply > U256::ZERO {
+            let mut fees = [U256::ZERO; 2];
+            let n_coins = U256::from(N_COINS);
+            let fee = U256::from(self.fee()) * n_coins / (U256::from(4) * (n_coins - U256::from(1)));
+            let admin_fee = U256::from(self.admin_fee());
+
+            for i in 0..N_COINS as usize {
+                let ideal_balance = D1 * old_balances[i] / D0;
+                let difference = if ideal_balance > new_balances[i] {
+                    ideal_balance - new_balances[i]
                 } else {
-                    U256::ZERO
+                    new_balances[i] - ideal_balance
                 };
-
-                let mut new_balances = old_balances;
-                for i in 0..N_COINS as usize {
-                    new_balances[i] += U256::from(amounts[i]);
-                }
-
-                let D1 = math::get_D(&new_balances, amp)?;
-                anyhow::ensure!(D1 > D0, "D1 must be greater than D0");
-
-                let mint_amount;
-                if token_supply > U256::ZERO {
-                    let mut fees = [U256::ZERO; 2];
-                    let n_coins = U256::from(N_COINS);
-                    let fee = U256::from(self.fee()) * n_coins / (U256::from(4) * (n_coins - U256::from(1)));
-                    let admin_fee = U256::from(self.admin_fee());
-
-                    for i in 0..N_COINS as usize {
-                        let ideal_balance = D1 * old_balances[i] / D0;
-                        let difference = if ideal_balance > new_balances[i] {
-                            ideal_balance - new_balances[i]
-                        } else {
-                            new_balances[i] - ideal_balance
-                        };
-                        fees[i] = fee * difference / U256::from(FEE_DENOMINATOR);
-                        self.set_admin_balances(i, self.admin_balances(i) + fees[i] * admin_fee / U256::from(FEE_DENOMINATOR));
-                        new_balances[i] -= fees[i];
-                    }
-                    let D2 = math::get_D(&new_balances, amp)?;
-                    mint_amount = token_supply * (D2 - D0) / D0;
-                } else {
-                    mint_amount = D1;
-                }
-
-                anyhow::ensure!(mint_amount >= U256::from(*min_mint_amount), "Slippage screwed you");
-
-                for i in 0..N_COINS as usize {
-                    self.set_balances(i, new_balances[i]);
-                }
-
-                let runtime = self.runtime();
-                for i in 0..N_COINS as usize {
-                    runtime.transfer_from(
-                        self.coins(i),
-                        runtime.sender(),
-                        amounts[i],
-                    )?;
-                }
-                self.mint(runtime.sender(), mint_amount.try_into().unwrap())?;
-
-                Ok(())
+                fees[i] = fee * difference / U256::from(FEE_DENOMINATOR);
+                self.set_admin_balances(
+                    i,
+                    self.admin_balances(i) + fees[i] * admin_fee / U256::from(FEE_DENOMINATOR),
+                );
+                new_balances[i] -= fees[i];
             }
-            RemoveLiquidity { amount, min_amounts } => {
-                let total_supply = self.total_supply();
-                let mut amounts = [U256::ZERO; 2];
-                let balances = self._get_balances();
-                let amount = U256::from(*amount);
+            let D2 = math::get_D(&new_balances, amp)?;
+            mint_amount = token_supply * (D2 - D0) / D0;
+        } else {
+            mint_amount = D1;
+        }
 
-                for i in 0..N_COINS as usize {
-                    let value = balances[i] * amount / total_supply;
-                    anyhow::ensure!(value >= U256::from(min_amounts[i]), "Withdrawal resulted in fewer coins than expected");
-                    amounts[i] = value;
-                    self.set_balances(i, balances[i] - value);
-                }
+        anyhow::ensure!(
+            mint_amount >= U256::from(min_mint_amount),
+            "Slippage screwed you"
+        );
 
-                let runtime = self.runtime();
-                self.burn(runtime.sender(), (*amount).try_into().unwrap())?;
-                for i in 0..N_COINS as usize {
-                    runtime.transfer(self.coins(i), runtime.sender(), amounts[i].try_into().unwrap())?;
-                }
+        for i in 0..N_COINS as usize {
+            self.set_balances(i, new_balances[i]);
+        }
 
-                Ok(())
-            }
-            RemoveLiquidityImbalance {
-                amounts,
-                max_burn_amount,
-            } => {
-                let amp = self.A();
-                let old_balances = self._get_balances();
-                let token_supply = self.total_supply();
-                let D0 = math::get_D(&old_balances, amp)?;
+        for i in 0..N_COINS as usize {
+            self.runtime().transfer_from(self.coins(i), self.runtime().sender(), amounts[i])?;
+        }
+        self.mint(self.runtime().sender(), mint_amount.try_into().unwrap())?;
 
-                let mut new_balances = old_balances;
-                for i in 0..N_COINS as usize {
-                    new_balances[i] -= U256::from(amounts[i]);
-                }
+        Ok(CallResponse::default())
+    }
 
-                let D1 = math::get_D(&new_balances, amp)?;
-                let mut fees = [U256::ZERO; 2];
-                let n_coins = U256::from(N_COINS);
-                let fee = U256::from(self.fee()) * n_coins / (U256::from(4) * (n_coins - U256::from(1)));
-                let admin_fee = U256::from(self.admin_fee());
+    pub fn remove_liquidity(
+        &self,
+        amount: u128,
+        min_amounts: Vec<u128>,
+    ) -> Result<CallResponse> {
+        let total_supply = self.total_supply();
+        let mut amounts = [U256::ZERO; 2];
+        let balances = self._get_balances();
+        let amount_u256 = U256::from(amount);
 
-                for i in 0..N_COINS as usize {
-                    let ideal_balance = D1 * old_balances[i] / D0;
-                    let difference = if ideal_balance > new_balances[i] {
-                        ideal_balance - new_balances[i]
-                    } else {
-                        new_balances[i] - ideal_balance
-                    };
-                    fees[i] = fee * difference / U256::from(FEE_DENOMINATOR);
-                    self.set_admin_balances(i, self.admin_balances(i) + fees[i] * admin_fee / U256::from(FEE_DENOMINATOR));
-                    new_balances[i] -= fees[i];
-                }
+        for i in 0..N_COINS as usize {
+            let value = balances[i] * amount_u256 / total_supply;
+            anyhow::ensure!(
+                value >= U256::from(min_amounts[i]),
+                "Withdrawal resulted in fewer coins than expected"
+            );
+            amounts[i] = value;
+            self.set_balances(i, balances[i] - value);
+        }
 
-                let D2 = math::get_D(&new_balances, amp)?;
-                let token_amount = token_supply * (D0 - D2) / D0;
-                anyhow::ensure!(token_amount <= U256::from(*max_burn_amount), "Slippage screwed you");
+        self.burn(self.runtime().sender(), amount)?;
+        for i in 0..N_COINS as usize {
+            self.runtime().transfer(
+                self.coins(i),
+                self.runtime().sender(),
+                amounts[i].try_into().unwrap(),
+            )?;
+        }
 
-                for i in 0..N_COINS as usize {
-                    self.set_balances(i, old_balances[i] - U256::from(amounts[i]));
-                }
+        Ok(CallResponse::default())
+    }
 
-                let runtime = self.runtime();
-                self.burn(runtime.sender(), token_amount.try_into().unwrap())?;
-                for i in 0..N_COINS as usize {
-                    runtime.transfer(self.coins(i), runtime.sender(), U256::from(amounts[i]).try_into().unwrap())?;
-                }
+    pub fn remove_liquidity_imbalance(
+        &self,
+        amounts: Vec<u128>,
+        max_burn_amount: u128,
+    ) -> Result<CallResponse> {
+        let amp = self.A();
+        let old_balances = self._get_balances();
+        let token_supply = self.total_supply();
+        let D0 = math::get_D(&old_balances, amp)?;
 
-                Ok(())
-            }
-            RemoveLiquidityOneCoin {
-                token_amount,
+        let mut new_balances = old_balances;
+        for i in 0..N_COINS as usize {
+            new_balances[i] -= U256::from(amounts[i]);
+        }
+
+        let D1 = math::get_D(&new_balances, amp)?;
+        let mut fees = [U256::ZERO; 2];
+        let n_coins = U256::from(N_COINS);
+        let fee = U256::from(self.fee()) * n_coins / (U256::from(4) * (n_coins - U256::from(1)));
+        let admin_fee = U256::from(self.admin_fee());
+
+        for i in 0..N_COINS as usize {
+            let ideal_balance = D1 * old_balances[i] / D0;
+            let difference = if ideal_balance > new_balances[i] {
+                ideal_balance - new_balances[i]
+            } else {
+                new_balances[i] - ideal_balance
+            };
+            fees[i] = fee * difference / U256::from(FEE_DENOMINATOR);
+            self.set_admin_balances(
                 i,
-                min_amount,
-            } => {
-                let i = *i as usize;
-                let token_amount = U256::from(*token_amount);
-                let min_amount = U256::from(*min_amount);
+                self.admin_balances(i) + fees[i] * admin_fee / U256::from(FEE_DENOMINATOR),
+            );
+            new_balances[i] -= fees[i];
+        }
 
-                let dy = self._calc_withdraw_one_coin(token_amount, i)?;
-                anyhow::ensure!(dy >= min_amount, "Not enough coins removed");
+        let D2 = math::get_D(&new_balances, amp)?;
+        let token_amount = token_supply * (D0 - D2) / D0;
+        anyhow::ensure!(
+            token_amount <= U256::from(max_burn_amount),
+            "Slippage screwed you"
+        );
 
-                self.set_balances(i, self.balances(i) - dy);
+        for i in 0..N_COINS as usize {
+            self.set_balances(i, old_balances[i] - U256::from(amounts[i]));
+        }
 
-                let runtime = self.runtime();
-                self.burn(runtime.sender(), token_amount.try_into().unwrap())?;
-                runtime.transfer(self.coins(i), runtime.sender(), dy.try_into().unwrap())?;
+        self.burn(self.runtime().sender(), token_amount.try_into().unwrap())?;
+        for i in 0..N_COINS as usize {
+            self.runtime().transfer(
+                self.coins(i),
+                self.runtime().sender(),
+                U256::from(amounts[i]).try_into().unwrap(),
+            )?;
+        }
 
-                Ok(())
-            }
-            ClaimAdminFees {} => {
-                let owner = self.owner();
-                anyhow::ensure!(self.runtime().sender() == owner, "Not the owner");
-                for i in 0..N_COINS as usize {
-                    let amount = self.admin_balances(i);
-                    if amount > U256::ZERO {
-                        self.set_admin_balances(i, U256::ZERO);
-                        self.runtime().transfer(self.coins(i), owner, amount.try_into().unwrap())?;
-                    }
-                }
-                Ok(())
-            }
-            GetVirtualPrice {} => {
-                let balances = self._get_balances();
-                let amp = self.A();
-                let D = math::get_D(&balances, amp)?;
-                let token_supply = self.total_supply();
-                let virtual_price = D * U256::from(PRECISION) / token_supply;
-                self.runtime().result(&[virtual_price.try_into().unwrap()]);
-                Ok(())
-            }
-            GetBalances {} => {
-                let balances = self._get_balances();
-                self.runtime().result(&[
-                    balances[0].try_into().unwrap(),
-                    balances[1].try_into().unwrap(),
-                ]);
-                Ok(())
-            }
-            GetA {} => {
-                self.runtime().result(&[self.A().try_into().unwrap()]);
-                Ok(())
+        Ok(CallResponse::default())
+    }
+
+    pub fn remove_liquidity_one_coin(
+        &self,
+        token_amount: u128,
+        i: i128,
+        min_amount: u128,
+    ) -> Result<CallResponse> {
+        let i = i as usize;
+        let token_amount_u256 = U256::from(token_amount);
+        let min_amount_u256 = U256::from(min_amount);
+
+        let dy = self._calc_withdraw_one_coin(token_amount_u256, i)?;
+        anyhow::ensure!(dy >= min_amount_u256, "Not enough coins removed");
+
+        self.set_balances(i, self.balances(i) - dy);
+
+        self.burn(self.runtime().sender(), token_amount)?;
+        self.runtime().transfer(self.coins(i), self.runtime().sender(), dy.try_into().unwrap())?;
+
+        Ok(CallResponse::default())
+    }
+
+    pub fn swap(&self, i: i128, j: i128, dx: u128, min_dy: u128) -> Result<CallResponse> {
+        let i = i as usize;
+        let j = j as usize;
+        let dx_u256 = U256::from(dx);
+        let min_dy_u256 = U256::from(min_dy);
+
+        let dy = self._exchange(i, j, dx_u256)?;
+        anyhow::ensure!(dy >= min_dy_u256, "Slippage screwed you");
+
+        self.runtime().transfer_from(self.coins(i), self.runtime().sender(), dx)?;
+        self.runtime().transfer(self.coins(j), self.runtime().sender(), dy.try_into().unwrap())?;
+
+        Ok(CallResponse::default())
+    }
+
+    pub fn claim_admin_fees(&self) -> Result<CallResponse> {
+        let owner = self.owner();
+        anyhow::ensure!(self.runtime().sender() == owner, "Not the owner");
+        for i in 0..N_COINS as usize {
+            let amount = self.admin_balances(i);
+            if amount > U256::ZERO {
+                self.set_admin_balances(i, U256::ZERO);
+                self.runtime().transfer(
+                    self.coins(i),
+                    owner,
+                    amount.try_into().unwrap(),
+                )?;
             }
         }
+        Ok(CallResponse::default())
+    }
+
+    pub fn get_virtual_price(&self) -> Result<CallResponse> {
+        let balances = self._get_balances();
+        let amp = self.A();
+        let D = math::get_D(&balances, amp)?;
+        let token_supply = self.total_supply();
+        let virtual_price = D * U256::from(PRECISION) / token_supply;
+        let mut response = CallResponse::default();
+        response.data = virtual_price.to_le_bytes_vec();
+        Ok(response)
+    }
+
+    pub fn get_balances(&self) -> Result<CallResponse> {
+        let balances = self._get_balances();
+        let mut response = CallResponse::default();
+        response.data.extend_from_slice(&balances[0].to_le_bytes_vec());
+        response.data.extend_from_slice(&balances[1].to_le_bytes_vec());
+        Ok(response)
+    }
+
+    pub fn get_A(&self) -> Result<CallResponse> {
+        let mut response = CallResponse::default();
+        response.data = self.A().to_le_bytes_vec();
+        Ok(response)
     }
 }
-declare_alkane! {
-    impl AlkaneResponder for SynthPool {
-        type Message = SynthPoolMessage;
-    }
-}
+
+declare_alkane!{impl AlkaneResponder for SynthPool {
+  type Message = SynthPoolMessage;
+}}
+
 #[cfg(test)]
 mod tests;
