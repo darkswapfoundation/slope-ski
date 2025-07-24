@@ -89,11 +89,9 @@ pub enum SynthPoolMessage {
 
     #[opcode(5)]
     Swap {
-        i: u128,
-        j: u128,
-        dx: u128,
-        min_dy: u128,
-    },
+       j: u128,
+       min_dy: u128,
+   },
 
     #[opcode(10)]
     ClaimAdminFees,
@@ -516,14 +514,25 @@ impl SynthPool {
 
     fn swap(
         &self,
-        i: u128,
         j: u128,
-        dx: u128,
         min_dy: u128,
     ) -> Result<CallResponse> {
-        let i = i as usize;
+        let context = self.context()?;
         let j = j as usize;
-        let dx_u256 = U256::from(dx);
+        let coin0 = self.coins(0);
+        let coin1 = self.coins(1);
+        let mut incoming_transfer = None;
+        for transfer in context.incoming_alkanes.0.iter() {
+            if transfer.id == coin0 || transfer.id == coin1 {
+                anyhow::ensure!(incoming_transfer.is_none(), "Cannot swap more than one coin at a time");
+                incoming_transfer = Some(transfer);
+            }
+        }
+        let transfer = incoming_transfer.ok_or_else(|| anyhow!("No coin to swap provided in transaction"))?;
+        let i = if transfer.id == coin0 { 0 } else { 1 };
+        anyhow::ensure!(i != j, "Cannot swap a coin for itself");
+
+        let dx_u256 = U256::from(transfer.value);
         let min_dy_u256 = U256::from(min_dy);
 
         let dy = self._exchange(i, j, dx_u256)?;
