@@ -122,39 +122,39 @@ pub struct SynthPool();
 
 pub trait MintableToken {
     fn total_supply(&self) -> u128;
-    fn set_total_supply(&mut self, value: u128);
+    fn set_total_supply(&self, value: u128);
     fn balance_of(&self, owner: &AlkaneId) -> u128;
-    fn set_balance_of(&mut self, owner: &AlkaneId, value: u128);
-    fn mint(&mut self, to: &AlkaneId, amount: u128) -> Result<()>;
-    fn burn(&mut self, from: &AlkaneId, amount: u128) -> Result<()>;
+    fn set_balance_of(&self, owner: &AlkaneId, value: u128);
+    fn mint(&self, to: &AlkaneId, amount: u128) -> Result<()>;
+    fn burn(&self, from: &AlkaneId, amount: u128) -> Result<()>;
     fn name(&self) -> String;
     fn symbol(&self) -> String;
 }
 
 pub trait OwnedToken {
     fn owner(&self) -> AlkaneId;
-    fn set_owner(&mut self, owner: AlkaneId);
+    fn set_owner(&self, owner: AlkaneId);
 }
 
 impl MintableToken for SynthPool {
     fn total_supply(&self) -> u128 {
         StoragePointer::from_keyword("/total_supply").get_value::<u128>()
     }
-    fn set_total_supply(&mut self, value: u128) {
+    fn set_total_supply(&self, value: u128) {
         StoragePointer::from_keyword("/total_supply").set_value::<u128>(value);
     }
     fn balance_of(&self, owner: &AlkaneId) -> u128 {
         StoragePointer::from_keyword("/balance/").select(&(*owner).into()).get_value::<u128>()
     }
-    fn set_balance_of(&mut self, owner: &AlkaneId, value: u128) {
+    fn set_balance_of(&self, owner: &AlkaneId, value: u128) {
         StoragePointer::from_keyword("/balance/").select(&(*owner).into()).set_value::<u128>(value);
     }
-    fn mint(&mut self, to: &AlkaneId, amount: u128) -> Result<()> {
+    fn mint(&self, to: &AlkaneId, amount: u128) -> Result<()> {
         self.set_total_supply(self.total_supply() + amount);
         self.set_balance_of(to, self.balance_of(to) + amount);
         Ok(())
     }
-    fn burn(&mut self, from: &AlkaneId, amount: u128) -> Result<()> {
+    fn burn(&self, from: &AlkaneId, amount: u128) -> Result<()> {
         let balance = self.balance_of(from);
         anyhow::ensure!(balance >= amount, "Insufficient balance");
         self.set_balance_of(from, balance - amount);
@@ -178,13 +178,13 @@ impl OwnedToken for SynthPool {
             AlkaneId::try_from(data.as_slice().to_vec()).unwrap_or_default()
         }
     }
-    fn set_owner(&mut self, owner: AlkaneId) {
+    fn set_owner(&self, owner: AlkaneId) {
         StoragePointer::from_keyword("/owner").set(Arc::new(owner.into()))
     }
 }
 
 impl SynthPool {
-    fn coins(&mut self, index: usize) -> AlkaneId {
+    fn coins(&self, index: usize) -> AlkaneId {
         let data = StoragePointer::from_keyword(&format!("/coins/{}", index)).get();
         if data.is_empty() {
             Default::default()
@@ -192,7 +192,7 @@ impl SynthPool {
             AlkaneId::try_from(data.as_slice().to_vec()).unwrap_or_default()
         }
     }
-    fn set_coins(&mut self, index: usize, value: AlkaneId) {
+    fn set_coins(&self, index: usize, value: AlkaneId) {
         StoragePointer::from_keyword(&format!("/coins/{}", index)).set(Arc::new(value.into()))
     }
     fn A(&self) -> U256 {
@@ -203,22 +203,22 @@ impl SynthPool {
             U256::from_le_slice(&data)
         }
     }
-    fn set_A(&mut self, value: U256) {
+    fn set_A(&self, value: U256) {
         StoragePointer::from_keyword("/A").set(Arc::new(value.to_le_bytes::<32>().to_vec()))
     }
     fn fee(&self) -> u128 {
         StoragePointer::from_keyword("/fee").get_value::<u128>()
     }
-    fn set_fee(&mut self, value: u128) {
+    fn set_fee(&self, value: u128) {
         StoragePointer::from_keyword("/fee").set_value::<u128>(value)
     }
-    fn admin_fee(&mut self) -> u128 {
+    fn admin_fee(&self) -> u128 {
         StoragePointer::from_keyword("/admin_fee").get_value::<u128>()
     }
-    fn set_admin_fee(&mut self, value: u128) {
+    fn set_admin_fee(&self, value: u128) {
         StoragePointer::from_keyword("/admin_fee").set_value::<u128>(value)
     }
-    fn balances(&mut self, index: usize) -> U256 {
+    fn balances(&self, index: usize) -> U256 {
         let data = StoragePointer::from_keyword(&format!("/balances/{}", index)).get();
         if data.is_empty() {
             U256::ZERO
@@ -226,10 +226,10 @@ impl SynthPool {
             U256::from_le_slice(&data)
         }
     }
-    fn set_balances(&mut self, index: usize, value: U256) {
+    fn set_balances(&self, index: usize, value: U256) {
         StoragePointer::from_keyword(&format!("/balances/{}", index)).set(Arc::new(value.to_le_bytes::<32>().to_vec()))
     }
-    fn admin_balances(&mut self, index: usize) -> U256 {
+    fn admin_balances(&self, index: usize) -> U256 {
         let data = StoragePointer::from_keyword(&format!("/admin_balances/{}", index)).get();
         if data.is_empty() {
             U256::ZERO
@@ -237,15 +237,15 @@ impl SynthPool {
             U256::from_le_slice(&data)
         }
     }
-    fn set_admin_balances(&mut self, index: usize, value: U256) {
+    fn set_admin_balances(&self, index: usize, value: U256) {
         StoragePointer::from_keyword(&format!("/admin_balances/{}", index)).set(Arc::new(value.to_le_bytes::<32>().to_vec()))
     }
 
-    fn _get_balances(&mut self) -> [U256; 2] {
+    fn _get_balances(&self) -> [U256; 2] {
         [self.balances(0), self.balances(1)]
     }
 
-    fn _exchange(&mut self, i: usize, j: usize, dx: U256) -> Result<U256> {
+    fn _exchange(&self, i: usize, j: usize, dx: U256) -> Result<U256> {
         let balances = self._get_balances();
         let xp = balances;
         let x = xp[i] + dx;
@@ -271,7 +271,7 @@ impl SynthPool {
         Ok(dy)
     }
 
-    fn _calc_withdraw_one_coin(&mut self, token_amount: U256, i: usize) -> Result<U256> {
+    fn _calc_withdraw_one_coin(&self, token_amount: U256, i: usize) -> Result<U256> {
         let amp = self.A();
         let xp = self._get_balances();
         let D0 = math::get_D(&xp, amp)?;
@@ -294,7 +294,7 @@ impl SynthPool {
     }
 
     fn init_pool(
-        &mut self,
+        &self,
         token_a: AlkaneId,
         token_b: AlkaneId,
         A: u128,
@@ -312,7 +312,7 @@ impl SynthPool {
     }
 
     fn add_liquidity(
-        &mut self,
+        &self,
         amounts: Vec<u128>,
         min_mint_amount: u128,
     ) -> Result<CallResponse> {
@@ -371,7 +371,7 @@ impl SynthPool {
             self.set_balances(i, new_balances[i]);
         }
 
-        let mut response = CallResponse::default();
+        let response = CallResponse::default();
         let context = self.context()?;
         self.mint(&context.caller, mint_amount.try_into().unwrap())?;
 
@@ -379,7 +379,7 @@ impl SynthPool {
     }
 
     fn remove_liquidity(
-        &mut self,
+        &self,
         amount: u128,
         min_amounts: Vec<u128>,
     ) -> Result<CallResponse> {
@@ -415,7 +415,7 @@ impl SynthPool {
     }
 
     fn remove_liquidity_imbalance(
-        &mut self,
+        &self,
         amounts: Vec<u128>,
         max_burn_amount: u128,
     ) -> Result<CallResponse> {
@@ -480,7 +480,7 @@ impl SynthPool {
     }
 
     fn remove_liquidity_one_coin(
-        &mut self,
+        &self,
         token_amount: u128,
         i: u128,
         min_amount: u128,
@@ -508,7 +508,7 @@ impl SynthPool {
     }
 
     fn swap(
-        &mut self,
+        &self,
         i: u128,
         j: u128,
         dx: u128,
@@ -531,7 +531,7 @@ impl SynthPool {
         })
     }
 
-    fn claim_admin_fees(&mut self) -> Result<CallResponse> {
+    fn claim_admin_fees(&self) -> Result<CallResponse> {
         let context = self.context()?;
         let owner = self.owner();
         anyhow::ensure!(context.caller == owner, "Not the owner");
@@ -552,7 +552,7 @@ impl SynthPool {
         })
     }
 
-    fn get_virtual_price(&mut self) -> Result<CallResponse> {
+    fn get_virtual_price(&self) -> Result<CallResponse> {
         let balances = self._get_balances();
         let amp = self.A();
         let D = math::get_D(&balances, amp)?;
@@ -563,7 +563,7 @@ impl SynthPool {
         Ok(response)
     }
 
-    fn get_balances(&mut self) -> Result<CallResponse> {
+    fn get_balances(&self) -> Result<CallResponse> {
         let balances = self._get_balances();
         let mut response = CallResponse::default();
         response.data.extend_from_slice(&balances[0].to_le_bytes_vec());
@@ -571,13 +571,13 @@ impl SynthPool {
         Ok(response)
     }
 
-    fn get_a(&mut self) -> Result<CallResponse> {
+    fn get_a(&self) -> Result<CallResponse> {
         let mut response = CallResponse::default();
         response.data = self.A().to_le_bytes_vec();
         Ok(response)
     }
 
-    fn forward(&mut self) -> Result<CallResponse> {
+    fn forward(&self) -> Result<CallResponse> {
         Ok(CallResponse::default())
     }
 }
