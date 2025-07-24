@@ -18,8 +18,8 @@ leptos = { version = "0.6.12", features = ["csr"] }
 bitcoin = { version = "0.32.6", features = ["rand"] }
 anyhow = "1.0.91"
 leptos_router = { version = "0.6.12", features = ["csr"] }
-alkanes-support = { git = "https://github.com/kungfuflex/alkanes-rs.git" }
-alkanes-runtime = { git = "https://github.com/kungfuflex/alkanes-rs.git" }
-metashrew-support = { git = "https://github.com/sandshrewmetaprotocols/metashrew" }
-protorune-support = { git = "https://github.com/kungfuflex/alkanes-rs.git" }
-metashrew-core = { git = "https://github.com/sandshrewmetaprotocols/metashrew" }
+alkanes-support = { git = "https://github.com/kungfuflex/alkanes-rs.git", package = "alkanes-support" }
+alkanes-runtime = { git = "https://github.com/kungfuflex/alkanes-rs.git", package = "alkanes-runtime" }
+metashrew-support = { git = "https://github.com/sandshrewmetaprotocols/metashrew", package = "metashrew-support" }
+protorune-support = { git = "https://github.com/kungfuflex/alkanes-rs.git", package = "protorune-support" }
+metashrew-core = { git = "https://github.com/sandshrewmetaprotocols/metashrew", package = "metashrew-core" }

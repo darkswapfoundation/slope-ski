@@ -17,11 +17,29 @@
  */
 mod math;
 
-use alkanes_runtime::{declare_alkane, message::MessageDispatch, runtime::AlkaneResponder, storage::StoragePointer};
-use alkanes_support::{id::AlkaneId, response::CallResponse};
-use anyhow::Result;
-use metashrew_support::compat::{to_arraybuffer_layout, to_passback_ptr};
+use alkanes_runtime::{
+    declare_alkane,
+    message::MessageDispatch,
+    runtime::{AlkaneResponder},
+    storage::StoragePointer,
+};
+use alkanes_support::{
+    id::AlkaneId,
+    context::Context,
+    response::{CallResponse},
+    parcel::{AlkaneTransferParcel, AlkaneTransfer}
+};
+use anyhow::{anyhow, Result};
+use metashrew_support::{
+    byte_view::ByteView,
+    compat::{to_arraybuffer_layout, to_passback_ptr},
+    index_pointer::KeyValuePointer,
+};
 use ruint::aliases::U256;
+use serde::{de::Visitor, de::MapAccess, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
+use std::ops::Deref;
+use std::sync::Arc;
+use std::fmt;
 
 const N_COINS: u128 = 2;
 const PRECISION: u128 = 10u128.pow(18); // 1e18
@@ -62,7 +80,7 @@ pub enum SynthPoolMessage {
     #[opcode(3)]
     RemoveLiquidityOneCoin {
         token_amount: u128,
-        i: i128,
+        i: u128,
         min_amount: u128,
     },
 
@@ -74,14 +92,17 @@ pub enum SynthPoolMessage {
 
     #[opcode(5)]
     Swap {
-        i: i128,
-        j: i128,
+        i: u128,
+        j: u128,
         dx: u128,
         min_dy: u128,
     },
 
     #[opcode(10)]
     ClaimAdminFees,
+
+    #[opcode(50)]
+    Forward,
 
     #[opcode(100)]
     #[returns(u128)]
@@ -100,10 +121,40 @@ pub enum SynthPoolMessage {
 pub struct SynthPool();
 
 pub trait MintableToken {
+    fn total_supply(&self) -> U256;
+    fn set_total_supply(&mut self, value: U256);
+    fn mint(&mut self, amount: u128) -> Result<AlkaneTransfer>;
+    fn burn(&mut self, amount: u128) -> Result<()>;
     fn name(&self) -> String;
     fn symbol(&self) -> String;
 }
+
+pub trait OwnedToken {
+    fn owner(&self) -> AlkaneId;
+    fn set_owner(&mut self, owner: AlkaneId);
+}
+
 impl MintableToken for SynthPool {
+    fn total_supply(&self) -> U256 {
+        StoragePointer::from_keyword("/total_supply").get().map_or(U256::ZERO, |v| U256::from_le_slice(&v))
+    }
+    fn set_total_supply(&mut self, value: U256) {
+        StoragePointer::from_keyword("/total_supply").set(Arc::new(value.to_le_bytes_vec()))
+    }
+    fn mint(&mut self, amount: u128) -> Result<AlkaneTransfer> {
+        let amount_u256 = U256::from(amount);
+        self.set_total_supply(self.total_supply() + amount_u256);
+        Ok(AlkaneTransfer {
+          id: self.context()?.myself,
+          value: amount
+        })
+    }
+    fn burn(&mut self, amount: u128) -> Result<()> {
+        let amount_u256 = U256::from(amount);
+        anyhow::ensure!(self.total_supply() >= amount_u256, "Insufficient balance");
+        self.set_total_supply(self.total_supply() - amount_u256);
+        Ok(())
+    }
     fn name(&self) -> String {
         "æfrBTC-LP".to_string()
     }
@@ -112,49 +163,58 @@ impl MintableToken for SynthPool {
     }
 }
 
+impl OwnedToken for SynthPool {
+    fn owner(&self) -> AlkaneId {
+        StoragePointer::from_keyword("/owner").get().map_or(Default::default(), |v| AlkaneId::try_from(v).unwrap_or_default())
+    }
+    fn set_owner(&mut self, owner: AlkaneId) {
+        StoragePointer::from_keyword("/owner").set(Arc::new(owner.into()))
+    }
+}
+
 impl SynthPool {
     fn coins(&self, index: usize) -> AlkaneId {
-        StoragePointer::new(&format!("/coins/{}", index)).get_or_default()
+        StoragePointer::from_keyword(&format!("/coins/{}", index)).get().map_or(Default::default(), |v| AlkaneId::try_from(v).unwrap_or_default())
     }
-    fn set_coins(&self, index: usize, value: AlkaneId) {
-        StoragePointer::new(&format!("/coins/{}", index)).set(value)
+    fn set_coins(&mut self, index: usize, value: AlkaneId) {
+        StoragePointer::from_keyword(&format!("/coins/{}", index)).set(Arc::new(value.into()))
     }
     fn A(&self) -> U256 {
-        StoragePointer::from_keyword("/A").get_or_default()
+        StoragePointer::from_keyword("/A").get().map_or(U256::ZERO, |v| U256::from_le_slice(&v))
     }
-    fn set_A(&self, value: U256) {
-        StoragePointer::from_keyword("/A").set(value)
+    fn set_A(&mut self, value: U256) {
+        StoragePointer::from_keyword("/A").set(Arc::new(value.to_le_bytes_vec()))
     }
     fn fee(&self) -> u128 {
-        StoragePointer::from_keyword("/fee").get_or_default()
+        StoragePointer::from_keyword("/fee").get().map_or(0, |v| u128::from_le_bytes(v.try_into().unwrap_or_default()))
     }
-    fn set_fee(&self, value: u128) {
-        StoragePointer::from_keyword("/fee").set(value)
+    fn set_fee(&mut self, value: u128) {
+        StoragePointer::from_keyword("/fee").set(Arc::new(value.to_le_bytes().to_vec()))
     }
     fn admin_fee(&self) -> u128 {
-        StoragePointer::from_keyword("/admin_fee").get_or_default()
+        StoragePointer::from_keyword("/admin_fee").get().map_or(0, |v| u128::from_le_bytes(v.try_into().unwrap_or_default()))
     }
-    fn set_admin_fee(&self, value: u128) {
-        StoragePointer::from_keyword("/admin_fee").set(value)
+    fn set_admin_fee(&mut self, value: u128) {
+        StoragePointer::from_keyword("/admin_fee").set(Arc::new(value.to_le_bytes().to_vec()))
     }
     fn balances(&self, index: usize) -> U256 {
-        StoragePointer::new(&format!("/balances/{}", index)).get_or_default()
+        StoragePointer::from_keyword(&format!("/balances/{}", index)).get().map_or(U256::ZERO, |v| U256::from_le_slice(&v))
     }
-    fn set_balances(&self, index: usize, value: U256) {
-        StoragePointer::new(&format!("/balances/{}", index)).set(value)
+    fn set_balances(&mut self, index: usize, value: U256) {
+        StoragePointer::from_keyword(&format!("/balances/{}", index)).set(Arc::new(value.to_le_bytes_vec()))
     }
     fn admin_balances(&self, index: usize) -> U256 {
-        StoragePointer::new(&format!("/admin_balances/{}", index)).get_or_default()
+        StoragePointer::from_keyword(&format!("/admin_balances/{}", index)).get().map_or(U256::ZERO, |v| U256::from_le_slice(&v))
     }
-    fn set_admin_balances(&self, index: usize, value: U256) {
-        StoragePointer::new(&format!("/admin_balances/{}", index)).set(value)
+    fn set_admin_balances(&mut self, index: usize, value: U256) {
+        StoragePointer::from_keyword(&format!("/admin_balances/{}", index)).set(Arc::new(value.to_le_bytes_vec()))
     }
 
     fn _get_balances(&self) -> [U256; 2] {
         [self.balances(0), self.balances(1)]
     }
 
-    fn _exchange(&self, i: usize, j: usize, dx: U256) -> Result<U256> {
+    fn _exchange(&mut self, i: usize, j: usize, dx: U256) -> Result<U256> {
         let balances = self._get_balances();
         let xp = balances;
         let x = xp[i] + dx;
@@ -202,7 +262,7 @@ impl SynthPool {
     }
 
     pub fn init_pool(
-        &self,
+        &mut self,
         token_a: AlkaneId,
         token_b: AlkaneId,
         A: u128,
@@ -220,7 +280,8 @@ impl SynthPool {
     }
 
     pub fn add_liquidity(
-        &self,
+        &mut self,
+        context: &Context,
         amounts: Vec<u128>,
         min_mint_amount: u128,
     ) -> Result<CallResponse> {
@@ -245,7 +306,8 @@ impl SynthPool {
         if token_supply > U256::ZERO {
             let mut fees = [U256::ZERO; 2];
             let n_coins = U256::from(N_COINS);
-            let fee = U256::from(self.fee()) * n_coins / (U256::from(4) * (n_coins - U256::from(1)));
+            let fee =
+                U256::from(self.fee()) * n_coins / (U256::from(4) * (n_coins - U256::from(1)));
             let admin_fee = U256::from(self.admin_fee());
 
             for i in 0..N_COINS as usize {
@@ -277,16 +339,15 @@ impl SynthPool {
             self.set_balances(i, new_balances[i]);
         }
 
-        for i in 0..N_COINS as usize {
-            self.runtime().transfer_from(self.coins(i), self.runtime().sender(), amounts[i])?;
-        }
-        self.mint(self.runtime().sender(), mint_amount.try_into().unwrap())?;
+        let mut response = CallResponse::default();
+        response.alkanes.0.push(self.mint(mint_amount.try_into().unwrap())?);
 
-        Ok(CallResponse::default())
+        Ok(response)
     }
 
     pub fn remove_liquidity(
-        &self,
+        &mut self,
+        context: &Context,
         amount: u128,
         min_amounts: Vec<u128>,
     ) -> Result<CallResponse> {
@@ -305,20 +366,24 @@ impl SynthPool {
             self.set_balances(i, balances[i] - value);
         }
 
-        self.burn(self.runtime().sender(), amount)?;
+        self.burn(amount)?;
+        let mut outgoing_alkanes = vec![];
         for i in 0..N_COINS as usize {
-            self.runtime().transfer(
-                self.coins(i),
-                self.runtime().sender(),
-                amounts[i].try_into().unwrap(),
-            )?;
+            outgoing_alkanes.push(AlkaneTransfer {
+                id: self.coins(i),
+                value: amounts[i].try_into().unwrap(),
+            });
         }
 
-        Ok(CallResponse::default())
+        Ok(CallResponse {
+            alkanes: AlkaneTransferParcel(outgoing_alkanes),
+            ..Default::default()
+        })
     }
 
     pub fn remove_liquidity_imbalance(
-        &self,
+        &mut self,
+        context: &Context,
         amounts: Vec<u128>,
         max_burn_amount: u128,
     ) -> Result<CallResponse> {
@@ -335,7 +400,8 @@ impl SynthPool {
         let D1 = math::get_D(&new_balances, amp)?;
         let mut fees = [U256::ZERO; 2];
         let n_coins = U256::from(N_COINS);
-        let fee = U256::from(self.fee()) * n_coins / (U256::from(4) * (n_coins - U256::from(1)));
+        let fee =
+            U256::from(self.fee()) * n_coins / (U256::from(4) * (n_coins - U256::from(1)));
         let admin_fee = U256::from(self.admin_fee());
 
         for i in 0..N_COINS as usize {
@@ -364,22 +430,26 @@ impl SynthPool {
             self.set_balances(i, old_balances[i] - U256::from(amounts[i]));
         }
 
-        self.burn(self.runtime().sender(), token_amount.try_into().unwrap())?;
+        self.burn(token_amount.try_into().unwrap())?;
+        let mut outgoing_alkanes = vec![];
         for i in 0..N_COINS as usize {
-            self.runtime().transfer(
-                self.coins(i),
-                self.runtime().sender(),
-                U256::from(amounts[i]).try_into().unwrap(),
-            )?;
+            outgoing_alkanes.push(AlkaneTransfer {
+                id: self.coins(i),
+                value: amounts[i].try_into().unwrap(),
+            });
         }
 
-        Ok(CallResponse::default())
+        Ok(CallResponse {
+            alkanes: AlkaneTransferParcel(outgoing_alkanes),
+            ..Default::default()
+        })
     }
 
     pub fn remove_liquidity_one_coin(
-        &self,
+        &mut self,
+        context: &Context,
         token_amount: u128,
-        i: i128,
+        i: u128,
         min_amount: u128,
     ) -> Result<CallResponse> {
         let i = i as usize;
@@ -391,13 +461,25 @@ impl SynthPool {
 
         self.set_balances(i, self.balances(i) - dy);
 
-        self.burn(self.runtime().sender(), token_amount)?;
-        self.runtime().transfer(self.coins(i), self.runtime().sender(), dy.try_into().unwrap())?;
+        self.burn(token_amount)?;
 
-        Ok(CallResponse::default())
+        Ok(CallResponse {
+            alkanes: AlkaneTransferParcel(vec![AlkaneTransfer {
+                id: self.coins(i),
+                value: dy.try_into().unwrap(),
+            }]),
+            ..Default::default()
+        })
     }
 
-    pub fn swap(&self, i: i128, j: i128, dx: u128, min_dy: u128) -> Result<CallResponse> {
+    pub fn swap(
+        &mut self,
+        context: &Context,
+        i: u128,
+        j: u128,
+        dx: u128,
+        min_dy: u128,
+    ) -> Result<CallResponse> {
         let i = i as usize;
         let j = j as usize;
         let dx_u256 = U256::from(dx);
@@ -406,27 +488,33 @@ impl SynthPool {
         let dy = self._exchange(i, j, dx_u256)?;
         anyhow::ensure!(dy >= min_dy_u256, "Slippage screwed you");
 
-        self.runtime().transfer_from(self.coins(i), self.runtime().sender(), dx)?;
-        self.runtime().transfer(self.coins(j), self.runtime().sender(), dy.try_into().unwrap())?;
-
-        Ok(CallResponse::default())
+        Ok(CallResponse {
+            alkanes: AlkaneTransferParcel(vec![AlkaneTransfer {
+                id: self.coins(j),
+                value: dy.try_into().unwrap(),
+            }]),
+            ..Default::default()
+        })
     }
 
-    pub fn claim_admin_fees(&self) -> Result<CallResponse> {
+    pub fn claim_admin_fees(&mut self, context: &Context) -> Result<CallResponse> {
         let owner = self.owner();
-        anyhow::ensure!(self.runtime().sender() == owner, "Not the owner");
+        anyhow::ensure!(context.caller == owner, "Not the owner");
+        let mut outgoing_alkanes = vec![];
         for i in 0..N_COINS as usize {
             let amount = self.admin_balances(i);
             if amount > U256::ZERO {
                 self.set_admin_balances(i, U256::ZERO);
-                self.runtime().transfer(
-                    self.coins(i),
-                    owner,
-                    amount.try_into().unwrap(),
-                )?;
+                outgoing_alkanes.push(AlkaneTransfer {
+                    id: self.coins(i),
+                    value: amount.try_into().unwrap(),
+                });
             }
         }
-        Ok(CallResponse::default())
+        Ok(CallResponse {
+            alkanes: AlkaneTransferParcel(outgoing_alkanes),
+            ..Default::default()
+        })
     }
 
     pub fn get_virtual_price(&self) -> Result<CallResponse> {
@@ -453,11 +541,57 @@ impl SynthPool {
         response.data = self.A().to_le_bytes_vec();
         Ok(response)
     }
+
+    pub fn fallback(&self) -> Result<CallResponse> {
+        Ok(CallResponse::default())
+    }
 }
 
-declare_alkane!{impl AlkaneResponder for SynthPool {
-  type Message = SynthPoolMessage;
-}}
+declare_alkane! {
+    impl AlkaneResponder for SynthPool {
+        type Message = SynthPoolMessage;
+
+        fn dispatch(
+            &mut self,
+            context: &Context,
+            message: Self::Message,
+        ) -> Result<CallResponse> {
+            match message {
+                SynthPoolMessage::InitPool {
+                    token_a,
+                    token_b,
+                    A,
+                    fee,
+                    admin_fee,
+                    owner,
+                } => self.init_pool(token_a, token_b, A, fee, admin_fee, owner),
+                SynthPoolMessage::AddLiquidity {
+                    amounts,
+                    min_mint_amount,
+                } => self.add_liquidity(context, amounts, min_mint_amount),
+                SynthPoolMessage::RemoveLiquidity {
+                    amount,
+                    min_amounts,
+                } => self.remove_liquidity(context, amount, min_amounts),
+                SynthPoolMessage::RemoveLiquidityOneCoin {
+                    token_amount,
+                    i,
+                    min_amount,
+                } => self.remove_liquidity_one_coin(context, token_amount, i, min_amount),
+                SynthPoolMessage::RemoveLiquidityImbalance {
+                    amounts,
+                    max_burn_amount,
+                } => self.remove_liquidity_imbalance(context, amounts, max_burn_amount),
+                SynthPoolMessage::Swap { i, j, dx, min_dy } => self.swap(context, i, j, dx, min_dy),
+                SynthPoolMessage::ClaimAdminFees => self.claim_admin_fees(context),
+                SynthPoolMessage::GetVirtualPrice => self.get_virtual_price(),
+                SynthPoolMessage::GetBalances => self.get_balances(),
+                SynthPoolMessage::GetA => self.get_A(),
+                SynthPoolMessage::Forward => self.fallback(),
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests;
