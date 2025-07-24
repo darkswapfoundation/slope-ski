@@ -1,0 +1,36 @@
+#
+# This file is part of the slope-ski project.
+#
+# The slope-ski project is free software: you can redistribute it and/or modify
+# it under the terms of the MIT License.
+#
+# The slope-ski project is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# MIT License for more details.
+#
+# You should have received a copy of the MIT License
+# along with the slope-ski project. If not, see <https://opensource.org/licenses/MIT>.
+#
+[package]
+name = "synth-pool"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+alkanes-support = { workspace = true }
+alkanes-runtime = { workspace = true }
+metashrew-support = { workspace = true }
+protorune-support = { workspace = true}
+bitcoin = { workspace = true }
+anyhow = { workspace = true }
+num = "0.4.3"
+ruint = "1.12.3"
+hex = "0.4.3"
+
+[dev-dependencies]
+metashrew-core = { git = "https://github.com/sandshrewmetaprotocols/metashrew", features = ["test-utils"] }
+wasm-bindgen-test = "0.3.49"

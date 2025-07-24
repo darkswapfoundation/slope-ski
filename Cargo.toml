@@ -2,10 +2,23 @@
 name = "slope-ski"
 version = "0.1.0"
 edition = "2021"
+description = "SLOPE protocol"
+license = "MIT"
+repository = "https://github.com/kungfuflex/alkanes-rs"
+resolver = "2"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[dependencies]
+[workspace]
+members = [".", "crates/*", "alkanes/*"]
+
+[workspace.dependencies]
 leptos = { version = "0.6.12", features = ["csr"] }
+bitcoin = { version = "0.32.6", features = ["rand"] }
+anyhow = "1.0.91"
 leptos_router = { version = "0.6.12", features = ["csr"] }
+alkanes-support = { git = "https://github.com/kungfuflex/alkanes-rs.git" }
+alkanes-runtime = { git = "https://github.com/kungfuflex/alkanes-rs.git" }
+metashrew-support = { git = "https://github.com/sandshrewmetaprotocols/metashrew" }
+protorune-support = { git = "https://github.com/kungfuflex/alkanes-rs.git" }

@@ -1,5 +1,5 @@
-/target
-/dist
-Cargo.lock
-/reference
-.vercel
+target
+*.swp
+*.swo
+reference
+
