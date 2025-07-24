@@ -126,7 +126,7 @@ pub trait MintableToken {
     fn balance_of(&self, owner: &AlkaneId) -> u128;
     fn set_balance_of(&self, owner: &AlkaneId, value: u128);
     fn mint(&self, to: &AlkaneId, amount: u128) -> Result<()>;
-    fn burn(&self, from: &AlkaneId, amount: u128) -> Result<()>;
+    fn burn(&self) -> Result<U256>;
     fn name(&self) -> String;
     fn symbol(&self) -> String;
 }
@@ -154,12 +154,17 @@ impl MintableToken for SynthPool {
         self.set_balance_of(to, self.balance_of(to) + amount);
         Ok(())
     }
-    fn burn(&self, from: &AlkaneId, amount: u128) -> Result<()> {
-        let balance = self.balance_of(from);
-        anyhow::ensure!(balance >= amount, "Insufficient balance");
-        self.set_balance_of(from, balance - amount);
+    fn burn(&self) -> Result<U256> {
+        let context = self.context()?;
+        let amount = self.context()?.incoming_alkanes.0.clone().into_iter().fold(0, |r, v| {
+          if &v.id == &context.myself {
+            r + v.value
+          } else {
+            r
+          }
+        })
         self.set_total_supply(self.total_supply() - amount);
-        Ok(())
+        Ok(U256::from(amount))
     }
     fn name(&self) -> String {
         "æfrBTC-LP".to_string()
@@ -313,9 +318,9 @@ impl SynthPool {
 
     fn add_liquidity(
         &self,
-        amounts: Vec<u128>,
         min_mint_amount: u128,
     ) -> Result<CallResponse> {
+        let amounts = [self.coins(0), self.coins(1)].to_vec();
         let amp = self.A();
         let old_balances = self._get_balances();
         let token_supply = self.total_supply();
@@ -380,13 +385,12 @@ impl SynthPool {
 
     fn remove_liquidity(
         &self,
-        amount: u128,
         min_amounts: Vec<u128>,
     ) -> Result<CallResponse> {
         let total_supply = self.total_supply();
         let mut amounts = [U256::ZERO; 2];
         let balances = self._get_balances();
-        let amount_u256 = U256::from(amount);
+        let amount_u256 = self.burn()?;
 
         for i in 0..N_COINS as usize {
             let value = balances[i] * amount_u256 / U256::from(total_supply);
@@ -399,7 +403,6 @@ impl SynthPool {
         }
 
         let context = self.context()?;
-        self.burn(&context.caller, amount)?;
         let mut outgoing_alkanes = vec![];
         for i in 0..N_COINS as usize {
             outgoing_alkanes.push(AlkaneTransfer {
@@ -481,11 +484,11 @@ impl SynthPool {
 
     fn remove_liquidity_one_coin(
         &self,
-        token_amount: u128,
         i: u128,
         min_amount: u128,
     ) -> Result<CallResponse> {
         let i = i as usize;
+        let token_amount = self.burn()?;
         let token_amount_u256 = U256::from(token_amount);
         let min_amount_u256 = U256::from(min_amount);
 
@@ -496,7 +499,6 @@ impl SynthPool {
         self.set_balances(i, balance - dy);
 
         let context = self.context()?;
-        self.burn(&context.caller, token_amount)?;
 
         Ok(CallResponse {
             alkanes: AlkaneTransferParcel(vec![AlkaneTransfer {
