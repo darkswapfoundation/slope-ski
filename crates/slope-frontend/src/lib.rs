@@ -57,7 +57,7 @@ fn AppContent() -> impl IntoView {
 
     view! {
         <div
-            class="bg-transparent text-white min-h-screen flex flex-col"
+            class="text-white min-h-screen flex flex-col"
         >
             <Show when=move || !is_landing_page() fallback=|| view! {}>
                 <Header />
