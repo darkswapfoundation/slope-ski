@@ -27,10 +27,10 @@ pub fn Header() -> impl IntoView {
     view! {
         <header class="bg-gray-800 bg-opacity-60 p-4 flex justify-between items-center border-b border-gray-700">
             <div class="flex items-center space-x-4">
-                <img src="/slope-logo-v2.svg" alt="Slope.Ski Logo" class="h-12 w-12"/>
+                <img src="/public/slope-logo-v2.svg" alt="Slope.Ski Logo" class="h-12 w-12"/>
                 <div class="flex flex-col">
                     <span class="text-xl font-bold text-white">"Slope.Ski"</span>
-                    <span class="text-sm text-purple-400">"Stable swaps on the slope"</span>
+                    <span class="text-sm text-green-400">"Stable swaps on the slope"</span>
                 </div>
             </div>
             <nav class="space-x-2">
@@ -47,7 +47,7 @@ pub fn Header() -> impl IntoView {
                     Some(address) => view! {
                         <button
                             on:click=disconnect_wallet
-                            class="bg-gray-700 text-purple-300 font-mono py-2 px-4 rounded-lg"
+                            class="bg-gray-700 text-green-300 font-mono py-2 px-4 rounded-lg"
                         >
                             {format!("Disconnect {}", address)}
                         </button>
@@ -55,7 +55,7 @@ pub fn Header() -> impl IntoView {
                     None => view! {
                         <button
                             on:click=connect_wallet
-                            class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg"
+                            class="bg-green-900 hover:bg-green-800 text-white font-bold py-2 px-4 rounded-lg"
                         >
                             "Connect Wallet"
                         </button>

@@ -17,7 +17,7 @@ pub fn Landing() -> impl IntoView {
     view! {
         <div class="flex flex-col items-center justify-center h-full text-white text-center">
             <div class="bg-gray-800 bg-opacity-80 p-10 rounded-lg shadow-2xl max-w-2xl">
-                <h1 class="text-4xl font-bold mb-4 text-purple-400">"Welcome to Slope.Ski"</h1>
+                <h1 class="text-4xl font-bold mb-4 text-green-400">"Welcome to Slope.Ski"</h1>
                 <p class="mb-6">
                     "This is a decentralized finance application currently under active development.
                     While we strive for security and stability, the software is experimental."
@@ -30,7 +30,7 @@ pub fn Landing() -> impl IntoView {
                 </p>
                 <button
                     on:click=proceed_to_swap
-                    class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105"
+                    class="bg-green-900 hover:bg-green-800 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105"
                 >
                     "I Understand, Proceed to Swap"
                 </button>

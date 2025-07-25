@@ -52,7 +52,7 @@ pub fn Pool() -> impl IntoView {
                     <div class="space-y-2 text-gray-300">
                         <div class="flex justify-between"><span>"Fee Structure:"</span><span class="font-mono">{pool.fee_tier_1}</span></div>
                         <div class="flex justify-between"><span></span><span class="font-mono">{pool.fee_tier_2}</span></div>
-                        <div class="flex justify-between mt-2"><span>"Total Value Locked:"</span><span class="font-bold text-lg text-purple-400">{pool.tvl}</span></div>
+                        <div class="flex justify-between mt-2"><span>"Total Value Locked:"</span><span class="font-bold text-lg text-green-400">{pool.tvl}</span></div>
                     </div>
                 </A>
             }

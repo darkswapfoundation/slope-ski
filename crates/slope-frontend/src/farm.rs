@@ -1,9 +1,6 @@
-// Chadson v69.0.0: Systematic Task Completion
-//
-// This file defines the Farm component.
-//
-// Current Task: Re-implement the full UI to isolate the rendering failure.
-// Step: Implement the full Farm UI with mock data.
+// src/farm.rs
+// Chadson v69.0.0: Defines the Farm component.
+// This component displays available yield farming opportunities.
 
 use leptos::*;
 
@@ -58,11 +55,11 @@ pub fn Farm() -> impl IntoView {
                                 <span>{format!("{}%", farm.pool_capacity)}</span>
                             </div>
                             <div class="w-full bg-gray-700 rounded-full h-2.5">
-                                <div class="bg-blue-600 h-2.5 rounded-full" style=format!("width: {}%", farm.pool_capacity)></div>
+                                <div class="bg-green-900 h-2.5 rounded-full" style=format!("width: {}%", farm.pool_capacity)></div>
                             </div>
                         </div>
                     </div>
-                    <button class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">
+                    <button class="mt-6 w-full bg-green-900 hover:bg-green-800 text-white font-bold py-2 px-4 rounded-lg">
                         "Stake LP Tokens"
                     </button>
                 </div>

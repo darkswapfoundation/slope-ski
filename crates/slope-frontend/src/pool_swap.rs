@@ -12,7 +12,7 @@ pub fn PoolSwap() -> impl IntoView {
             <div class="border border-gray-700 rounded-lg p-3 mb-2">
                 <div class="flex justify-between items-center">
                     <input type="number" class="bg-transparent w-full focus:outline-none" placeholder="0.0"/>
-                    <button class="bg-purple-600 text-white text-sm font-bold py-1 px-3 rounded mx-2">"MAX"</button>
+                    <button class="bg-green-900 hover:bg-green-800 text-white text-sm font-bold py-1 px-3 rounded mx-2">"MAX"</button>
                     <div class="flex items-center space-x-2">
                         <img src=AE_BTC.icon class="h-6 w-6"/>
                         <span>{AE_BTC.ticker}</span>
@@ -48,7 +48,7 @@ pub fn PoolSwap() -> impl IntoView {
 
             // Swap Wrapped checkbox
             <label class="flex items-center text-gray-300 my-6">
-                <input type="checkbox" class="form-checkbox h-5 w-5 text-purple-600 bg-gray-700 border-gray-600 rounded"/>
+                <input type="checkbox" class="form-checkbox h-5 w-5 text-green-900 bg-gray-700 border-gray-600 rounded"/>
                 <span class="ml-3">"Swap Wrapped"</span>
             </label>
 
@@ -65,7 +65,7 @@ pub fn PoolSwap() -> impl IntoView {
                 </div>
             </div>
 
-            <button class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-lg">
+            <button class="w-full bg-green-900 hover:bg-green-800 text-white font-bold py-3 px-4 rounded-lg text-lg">
                 "Connect Wallet"
             </button>
         </div>

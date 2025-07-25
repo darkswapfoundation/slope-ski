@@ -1,9 +1,6 @@
-// Chadson v69.0.0: Systematic Task Completion
-//
-// This file defines the Dashboard component.
-//
-// Current Task: Re-implement the full UI to isolate the rendering failure.
-// Step: Implement the full Dashboard UI with mock data.
+// src/dashboard.rs
+// Chadson v69.0.0: Defines the Dashboard component.
+// This component displays an overview of the platform's statistics.
 
 use leptos::*;
 
@@ -33,7 +30,7 @@ pub fn Dashboard() -> impl IntoView {
                 <div class="bg-gray-800 p-6 rounded-lg">
                     <h2 class="text-xl font-bold mb-4">"Platform Health"</h2>
                     <div class="w-full bg-gray-700 rounded-full h-2.5">
-                        <div class="bg-blue-600 h-2.5 rounded-full" style="width: 65%"></div>
+                        <div class="bg-green-900 h-2.5 rounded-full" style="width: 65%"></div>
                     </div>
                     <p class="text-sm mt-2">"65% - Healthy"</p>
                 </div>

@@ -16,7 +16,7 @@ fn DepositTab() -> impl IntoView {
         <div class="space-y-4">
             <div class="flex items-center bg-gray-900 p-3 rounded-lg">
                 <input type="number" class="bg-transparent flex-grow focus:outline-none" placeholder="0.0"/>
-                <button class="text-purple-400 text-sm mx-2 flex-shrink-0">"MAX"</button>
+                <button class="text-green-400 text-sm mx-2 flex-shrink-0">"MAX"</button>
                 <div class="flex items-center space-x-2 flex-shrink-0">
                     <img src=AE_BTC.icon class="h-6 w-6"/>
                     <span>{AE_BTC.ticker}</span>
@@ -24,13 +24,13 @@ fn DepositTab() -> impl IntoView {
             </div>
             <div class="flex items-center bg-gray-900 p-3 rounded-lg">
                 <input type="number" class="bg-transparent flex-grow focus:outline-none" placeholder="0.0"/>
-                <button class="text-purple-400 text-sm mx-2 flex-shrink-0">"MAX"</button>
+                <button class="text-green-400 text-sm mx-2 flex-shrink-0">"MAX"</button>
                 <div class="flex items-center space-x-2 flex-shrink-0">
                     <img src=FR_BTC.icon class="h-6 w-6"/>
                     <span>{FR_BTC.ticker}</span>
                 </div>
             </div>
-            <button class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-lg !mt-6">
+            <button class="w-full bg-green-900 hover:bg-green-800 text-white font-bold py-3 px-4 rounded-lg text-lg !mt-6">
                 "Deposit"
             </button>
         </div>
@@ -63,24 +63,24 @@ pub fn PoolDetails() -> impl IntoView {
                 <div class="flex border-b border-gray-700 mb-6">
                     <button
                         on:click=move |_| set_active_tab.set(PoolTab::Deposit)
-                        class:text-purple-400=move || active_tab.get() == PoolTab::Deposit
-                        class:border-purple-400=move || active_tab.get() == PoolTab::Deposit
+                        class:text-green-400=move || active_tab.get() == PoolTab::Deposit
+                        class:border-green-400=move || active_tab.get() == PoolTab::Deposit
                         class="py-2 px-4 border-b-2 font-semibold transition-colors"
                     >
                         "Deposit"
                     </button>
                     <button
                         on:click=move |_| set_active_tab.set(PoolTab::Withdraw)
-                        class:text-purple-400=move || active_tab.get() == PoolTab::Withdraw
-                        class:border-purple-400=move || active_tab.get() == PoolTab::Withdraw
+                        class:text-green-400=move || active_tab.get() == PoolTab::Withdraw
+                        class:border-green-400=move || active_tab.get() == PoolTab::Withdraw
                         class="py-2 px-4 border-b-2 font-semibold transition-colors"
                     >
                         "Withdraw/Claim"
                     </button>
                     <button
                         on:click=move |_| set_active_tab.set(PoolTab::Swap)
-                        class:text-purple-400=move || active_tab.get() == PoolTab::Swap
-                        class:border-purple-400=move || active_tab.get() == PoolTab::Swap
+                        class:text-green-400=move || active_tab.get() == PoolTab::Swap
+                        class:border-green-400=move || active_tab.get() == PoolTab::Swap
                         class="py-2 px-4 border-b-2 font-semibold transition-colors"
                     >
                         "Swap"
@@ -118,7 +118,7 @@ pub fn PoolDetails() -> impl IntoView {
                             </div>
                         </div>
                         <div class="space-y-2 text-sm">
-                             <div class="flex justify-between"><span>"Daily USD volume:"</span><span class="font-bold text-purple-400">"4.34M"</span></div>
+                             <div class="flex justify-between"><span>"Daily USD volume:"</span><span class="font-bold text-green-400">"4.34M"</span></div>
                              <div class="flex justify-between"><span>"Liquidity utilization:"</span><span class="font-bold">"21.58%"</span></div>
                              <div class="flex justify-between"><span>"Total LP Tokens staked:"</span><span class="font-bold">"8,646"</span></div>
                              <div class="flex justify-between"><span>"Staked percent:"</span><span class="font-bold text-green-400">"99.93%"</span></div>

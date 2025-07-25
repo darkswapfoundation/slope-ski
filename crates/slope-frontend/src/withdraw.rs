@@ -18,23 +18,23 @@ fn WithdrawTab() -> impl IntoView {
                 <label class="block text-sm text-gray-400 mb-2">"LP Tokens"</label>
                 <div class="flex items-center bg-gray-900 p-3 rounded-lg">
                     <input type="number" class="bg-transparent w-full focus:outline-none" placeholder="0.0"/>
-                    <button class="bg-purple-600 text-white text-sm font-bold py-1 px-3 rounded">"MAX"</button>
+                    <button class="bg-green-900 hover:bg-green-800 text-white text-sm font-bold py-1 px-3 rounded">"MAX"</button>
                 </div>
             </div>
 
             <div class="flex items-center space-x-6 my-6">
                 <label class="flex items-center text-gray-300">
-                    <input type="radio" name="withdraw-option" class="form-radio h-4 w-4 text-purple-600 bg-gray-700 border-gray-600" checked=true/>
+                    <input type="radio" name="withdraw-option" class="form-radio h-4 w-4 text-green-900 bg-gray-700 border-gray-600" checked=true/>
                     <span class="ml-2">"One coin"</span>
                 </label>
                 <label class="flex items-center text-gray-300">
-                    <input type="radio" name="withdraw-option" class="form-radio h-4 w-4 text-purple-600 bg-gray-700 border-gray-600"/>
+                    <input type="radio" name="withdraw-option" class="form-radio h-4 w-4 text-green-900 bg-gray-700 border-gray-600"/>
                     <span class="ml-2">"Balanced"</span>
                 </label>
             </div>
 
             <label class="flex items-center text-gray-300 mb-6">
-                <input type="checkbox" class="form-checkbox h-5 w-5 text-purple-600 bg-gray-700 border-gray-600 rounded"/>
+                <input type="checkbox" class="form-checkbox h-5 w-5 text-green-900 bg-gray-700 border-gray-600 rounded"/>
                 <span class="ml-3">"Withdraw Wrapped"</span>
             </label>
 
@@ -52,7 +52,7 @@ fn WithdrawTab() -> impl IntoView {
                 </div>
             </div>
 
-            <button class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-lg">
+            <button class="w-full bg-green-900 hover:bg-green-800 text-white font-bold py-3 px-4 rounded-lg text-lg">
                 "Connect Wallet"
             </button>
         </div>
@@ -67,10 +67,10 @@ fn ClaimTab() -> impl IntoView {
                 <label class="block text-sm text-gray-400 mb-2">"LP Tokens"</label>
                 <div class="flex items-center bg-gray-900 p-3 rounded-lg">
                     <input type="number" class="bg-transparent w-full focus:outline-none" placeholder="0.0"/>
-                    <button class="bg-purple-600 text-white text-sm font-bold py-1 px-3 rounded">"MAX"</button>
+                    <button class="bg-green-900 hover:bg-green-800 text-white text-sm font-bold py-1 px-3 rounded">"MAX"</button>
                 </div>
             </div>
-            <button class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-lg mt-6">
+            <button class="w-full bg-green-900 hover:bg-green-800 text-white font-bold py-3 px-4 rounded-lg text-lg mt-6">
                 "Connect Wallet"
             </button>
         </div>
@@ -87,16 +87,16 @@ pub fn WithdrawClaim() -> impl IntoView {
             <div class="flex border-b border-gray-700 mb-6">
                 <button
                     on:click=move |_| set_active_sub_tab.set(WithdrawSubTab::Withdraw)
-                    class:text-purple-400=move || active_sub_tab.get() == WithdrawSubTab::Withdraw
-                    class:border-purple-400=move || active_sub_tab.get() == WithdrawSubTab::Withdraw
+                    class:text-green-400=move || active_sub_tab.get() == WithdrawSubTab::Withdraw
+                    class:border-green-400=move || active_sub_tab.get() == WithdrawSubTab::Withdraw
                     class="py-2 px-4 border-b-2 font-semibold transition-colors"
                 >
                     "Withdraw"
                 </button>
                 <button
                     on:click=move |_| set_active_sub_tab.set(WithdrawSubTab::Claim)
-                    class:text-purple-400=move || active_sub_tab.get() == WithdrawSubTab::Claim
-                    class:border-purple-400=move || active_sub_tab.get() == WithdrawSubTab::Claim
+                    class:text-green-400=move || active_sub_tab.get() == WithdrawSubTab::Claim
+                    class:border-green-400=move || active_sub_tab.get() == WithdrawSubTab::Claim
                     class="py-2 px-4 border-b-2 font-semibold transition-colors"
                 >
                     "Claim"

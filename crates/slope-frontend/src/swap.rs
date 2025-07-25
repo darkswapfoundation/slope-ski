@@ -89,7 +89,7 @@ pub fn Swap() -> impl IntoView {
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-gray-400">"Slippage tolerance"</span>
-                        <span class="font-bold text-purple-400">{move || format!("{:.2}%", slippage.get())}</span>
+                        <span class="font-bold text-green-400">{move || format!("{:.2}%", slippage.get())}</span>
                     </div>
                     <input
                         type="range"
@@ -98,11 +98,11 @@ pub fn Swap() -> impl IntoView {
                         step="0.01"
                         prop:value=move || slippage.get()
                         on:input=move |ev| set_slippage.set(event_target_value(&ev).parse().unwrap_or(0.0))
-                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-900"
                     />
                 </div>
 
-                <button class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-lg transition duration-300">
+                <button class="w-full bg-green-900 hover:bg-green-800 text-white font-bold py-3 px-4 rounded-lg text-lg transition duration-300">
                     "Swap"
                 </button>
             </div>
