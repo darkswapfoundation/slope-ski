@@ -16,11 +16,11 @@ pub struct Token {
 pub const FR_BTC: Token = Token {
     name: "fiat-pegged Bitcoin",
     ticker: "frBTC",
-    icon: "/frBTC.svg", // Placeholder icon path
+    icon: "/public/frBTC.svg", // Placeholder icon path
 };
 
 pub const AE_BTC: Token = Token {
     name: "Alkane-enhanced Bitcoin",
     ticker: "æBTC",
-    icon: "/aeBTC.svg", // Placeholder icon path
+    icon: "/public/aeBTC.svg", // Placeholder icon path
 };

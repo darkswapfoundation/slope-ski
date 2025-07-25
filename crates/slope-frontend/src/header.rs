@@ -27,7 +27,7 @@ pub fn Header() -> impl IntoView {
     view! {
         <header class="bg-gray-800 bg-opacity-60 p-4 flex justify-between items-center border-b border-gray-700">
             <div class="flex items-center space-x-4">
-                <img src="/slope-logo-v2.svg" alt="Slope.Ski Logo" class="h-12 w-12"/>
+                <img src="/public/slope-logo-v2.svg" alt="Slope.Ski Logo" class="h-12 w-12"/>
                 <div class="flex flex-col">
                     <span class="text-xl font-bold text-white">"Slope.Ski"</span>
                     <span class="text-sm text-purple-400">"Stable swaps on the slope"</span>
