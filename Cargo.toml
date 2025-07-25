@@ -23,3 +23,5 @@ alkanes-runtime = { git = "https://github.com/kungfuflex/alkanes-rs.git", packag
 metashrew-support = { git = "https://github.com/sandshrewmetaprotocols/metashrew", package = "metashrew-support" }
 protorune-support = { git = "https://github.com/kungfuflex/alkanes-rs.git", package = "protorune-support" }
 metashrew-core = { git = "https://github.com/sandshrewmetaprotocols/metashrew", package = "metashrew-core" }
+alkanes = { git = "https://github.com/kungfuflex/alkanes-rs.git", package = "alkanes" }
+protorune = { git = "https://github.com/kungfuflex/alkanes-rs.git", package = "protorune" }
