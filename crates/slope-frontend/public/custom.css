@@ -1,7 +1,7 @@
 /* Chadson v69.0.0: Custom styles for Slope.Ski */
 
 body.body-bg {
-    background-image: url('/mountain-background.svg');
+    background-image: url('/public/mountain-background.svg');
     background-size: cover;
     background-position: center;
     background-attachment: fixed; /* Ensures the background doesn't scroll with content */

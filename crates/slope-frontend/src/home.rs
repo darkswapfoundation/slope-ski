@@ -6,7 +6,7 @@ use leptos::*;
 #[component]
 pub fn Home() -> impl IntoView {
     view! {
-        <div class="flex flex-col items-center justify-center min-h-screen text-white">
+        <div class="flex flex-col items-center justify-center text-white py-16">
             <h1 class="text-5xl font-bold mb-4">"Welcome to Slope"</h1>
             <p class="text-xl">"This is the home page."</p>
         </div>
