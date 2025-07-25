@@ -294,6 +294,9 @@ impl<S: Storage + 'static> Logic<S> {
         let admin_fee = U256::from(self.admin_fee());
         if admin_fee > U256::ZERO {
             let dy_admin_fee = dy_fee * admin_fee / U256::from(FEE_DENOMINATOR);
+            println!("dy_fee: {}", dy_fee);
+            println!("admin_fee: {}", admin_fee);
+            println!("dy_admin_fee: {}", dy_admin_fee);
             let admin_balances = self.admin_balances(j);
             self.set_admin_balances(j, admin_balances + dy_admin_fee);
         }

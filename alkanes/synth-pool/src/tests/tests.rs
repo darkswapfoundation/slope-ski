@@ -234,8 +234,8 @@ fn test_claim_admin_fees() -> Result<()> {
     logic.set_coins(0, token_a);
     logic.set_coins(1, token_b);
     logic.set_A(U256::from(100));
-    logic.set_fee(10);
-    logic.set_admin_fee(1);
+    logic.set_fee(FEE_DENOMINATOR / 10);
+    logic.set_admin_fee(FEE_DENOMINATOR / 2);
     logic.set_owner(owner);
 
     let context = Context {
