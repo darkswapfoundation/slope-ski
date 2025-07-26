@@ -6,5 +6,4 @@ edition = "2021"
 [lib]
 
 [dependencies]
-alkanes-runtime = { path = "../../reference/alkanes-rs/crates/alkanes-runtime" }
 metashrew-support = { git = "https://github.com/sandshrewmetaprotocols/metashrew" }
