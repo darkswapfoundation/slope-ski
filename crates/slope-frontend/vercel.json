@@ -1,4 +1,15 @@
 {
+  "builds": [
+    {
+      "src": "Cargo.toml",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist",
+        "installCommand": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source $HOME/.cargo/env && rustup default stable && curl -fsSL https://github.com/trunk-rs/trunk/releases/download/v0.18.0/trunk-x86_64-unknown-linux-gnu.tar.gz -o trunk.tar.gz && tar -xzf trunk.tar.gz && mv trunk /usr/local/bin/",
+        "buildCommand": "trunk build --release"
+      }
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
